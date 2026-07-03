@@ -86,7 +86,7 @@
   #camStatus.show{ opacity:1; }
   #vignette{
     position:absolute; inset:0; pointer-events:none;
-    background: radial-gradient(120% 90% at 50% 40%, transparent 40%, rgba(6,5,10,0.55) 100%);
+    background: radial-gradient(130% 100% at 50% 42%, transparent 52%, rgba(6,5,10,0.38) 100%);
     mix-blend-mode:multiply;
   }
   #grain{
@@ -516,13 +516,14 @@
   /* ============================= CANVAS SETUP ============================= */
   const canvas = document.getElementById("viz");
   const ctx = canvas.getContext("2d");
-  let W=0, H=0, DPR=1;
+  let W=0, H=0, DPR=1, fieldScale=1;
   function resize(){
     DPR = Math.min(window.devicePixelRatio||1, 2);
     W = window.innerWidth; H = window.innerHeight;
     canvas.width = W*DPR; canvas.height = H*DPR;
     canvas.style.width = W+"px"; canvas.style.height = H+"px";
     ctx.setTransform(DPR,0,0,DPR,0,0);
+    fieldScale = clamp(Math.min(W,H)/430, 0.95, 2.6);
   }
   window.addEventListener("resize", resize);
   resize();
@@ -538,31 +539,53 @@
       this.active = true;
       this.age = 0;
       this.spawnAccum = 0;
+      // multiple emission anchors spread across the viewport so the
+      // signal fills the whole scene rather than rising from one point
+      this.anchors = [
+        [0.5, 0.56],
+        [0.22 + Math.random()*0.16, 0.32 + Math.random()*0.22],
+        [0.62 + Math.random()*0.2, 0.42 + Math.random()*0.28],
+        [0.5 + (Math.random()-0.5)*0.5, 0.72 + Math.random()*0.16]
+      ];
+      this.blobs = Array.from({length:4}, (_,i)=>({
+        fx: 0.15 + Math.random()*0.7,
+        fy: 0.15 + Math.random()*0.65,
+        ampX: 0.08 + Math.random()*0.08,
+        ampY: 0.06 + Math.random()*0.08,
+        freq: 0.05 + Math.random()*0.05,
+        phase: Math.random()*Math.PI*2,
+        radiusFrac: 0.34 + Math.random()*0.26,
+        useSecondary: i%2===1
+      }));
     }
-    rampMul(){ return clamp(this.age/1.1, 0, 1); }
+    rampMul(){ return clamp(this.age/1.3, 0, 1); }
     spawnRatePerSec(){
       const p = this.profile;
-      const base = 10 + (p.brightness + p.freshness + p.smoke) * 34;
+      const base = 16 + (p.brightness + p.freshness + p.smoke) * 48;
       return base * this.rampMul() * (reduceMotion?0.35:1);
     }
-    spawnOne(cx, cy){
-      const p = this.profile, w = this.weights;
+    spawnOne(w,h){
+      const p = this.profile, wt = this.weights;
       const r = Math.random();
-      const kind = r < w.orb ? "orb" : (r < w.orb+w.ribbon ? "ribbon" : "spike");
+      const kind = r < wt.orb ? "orb" : (r < wt.orb+wt.ribbon ? "ribbon" : "spike");
+      const anchor = this.anchors[Math.floor(Math.random()*this.anchors.length)];
+      const cx = anchor[0]*w, cy = anchor[1]*h;
       const ang = Math.random()*Math.PI*2;
-      const spread = 26 + p.freshness*40;
+      const field = Math.min(w,h);
+      const spread = field * (0.1 + p.freshness*0.16);
       const x = cx + Math.cos(ang)*spread*Math.random();
-      const y = cy + Math.sin(ang)*spread*Math.random()*0.6;
+      const y = cy + Math.sin(ang)*spread*Math.random()*0.75;
+      const outward = 0.18 + p.brightness*0.3;
       const upward = -(0.35 + (p.warmth+p.freshness)*0.55);
       const jitter = p.acidity*1.6;
-      const vx = (Math.random()-0.5)*jitter;
-      const vy = upward + (Math.random()-0.5)*0.4 + (kind==="spike"? p.earthiness*0.5 : 0);
+      const vx = Math.cos(ang)*outward + (Math.random()-0.5)*jitter;
+      const vy = Math.sin(ang)*outward*0.6 + upward + (Math.random()-0.5)*0.4 + (kind==="spike"? p.earthiness*0.5 : 0);
       const useSecondary = Math.random() < 0.42;
       const hue = useSecondary ? this.palette.hue2 : this.palette.hue;
-      const life = kind==="ribbon" ? lerp(2.6,5.2,Math.random()) : lerp(1.8,3.8,Math.random());
-      const size = kind==="orb" ? lerp(5,10,Math.random()) * (0.6+p.sweetness*1.4)
-                 : kind==="spike" ? lerp(4,8,Math.random()) * (0.6+p.bitterness*1.3)
-                 : lerp(1.2,2.6,Math.random()) * (0.7+p.floral*1.2);
+      const life = kind==="ribbon" ? lerp(3.2,6.4,Math.random()) : lerp(2.2,4.6,Math.random());
+      const size = (kind==="orb" ? lerp(11,24,Math.random()) * (0.6+p.sweetness*1.4)
+                 : kind==="spike" ? lerp(9,18,Math.random()) * (0.6+p.bitterness*1.3)
+                 : lerp(2.6,5.4,Math.random()) * (0.7+p.floral*1.2)) * fieldScale;
       this.particles.push({
         x,y,vx,vy,kind,hue,
         sat: this.palette.sat, light: this.palette.light,
@@ -571,11 +594,11 @@
         hist: kind==="ribbon" ? [[x,y]] : null
       });
     }
-    update(dt, t, cx, cy){
+    update(dt, t, w, h){
       this.age += dt;
       if(this.active){
         this.spawnAccum += this.spawnRatePerSec()*dt;
-        while(this.spawnAccum >= 1){ this.spawnOne(cx,cy); this.spawnAccum -= 1; }
+        while(this.spawnAccum >= 1){ this.spawnOne(w,h); this.spawnAccum -= 1; }
       }
       const p = this.profile;
       for(let i=this.particles.length-1;i>=0;i--){
@@ -583,13 +606,31 @@
         const fa = flowAngle(q.x, q.y, t);
         q.vx += Math.cos(fa)*0.045 + (Math.random()-0.5)*p.acidity*0.12;
         q.vy += Math.sin(fa)*0.03 - 0.012*(p.warmth) + 0.006*p.earthiness*(q.kind==="spike"?1:0.3);
-        q.vx *= 0.985; q.vy *= 0.985;
-        q.x += q.vx*dt*60*0.5; q.y += q.vy*dt*60*0.5;
+        q.vx *= 0.988; q.vy *= 0.988;
+        q.x += q.vx*dt*60*0.85; q.y += q.vy*dt*60*0.85;
         q.rot += q.rotSpeed*dt;
         q.life -= dt;
-        if(q.hist){ q.hist.push([q.x,q.y]); if(q.hist.length>16) q.hist.shift(); }
-        if(q.life<=0 || q.x<-100||q.x>W+100||q.y<-140||q.y>H+140) this.particles.splice(i,1);
+        if(q.hist){ q.hist.push([q.x,q.y]); if(q.hist.length>20) q.hist.shift(); }
+        if(q.life<=0 || q.x<-160||q.x>w+160||q.y<-220||q.y>h+220) this.particles.splice(i,1);
       }
+    }
+    drawBlobs(ctx, w, h, t){
+      const p = this.profile;
+      const breathe = 0.5 + 0.5*Math.sin(t*0.35);
+      const baseAlpha = (0.05 + p.brightness*0.05) * this.rampMul() * (0.6+breathe*0.4);
+      ctx.globalCompositeOperation = "lighter";
+      for(const b of this.blobs){
+        const bx = (b.fx + Math.sin(t*b.freq + b.phase)*b.ampX) * w;
+        const by = (b.fy + Math.cos(t*b.freq*0.8 + b.phase)*b.ampY) * h;
+        const rad = b.radiusFrac * Math.max(w,h) * fieldScale;
+        const hue = b.useSecondary ? this.palette.hue2 : this.palette.hue;
+        const g = ctx.createRadialGradient(bx,by,0,bx,by,rad);
+        g.addColorStop(0, `hsla(${hue},${this.palette.sat}%,${this.palette.light}%,${baseAlpha})`);
+        g.addColorStop(1, `hsla(${hue},${this.palette.sat}%,${this.palette.light}%,0)`);
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(bx,by,rad,0,Math.PI*2); ctx.fill();
+      }
+      ctx.globalCompositeOperation = "source-over";
     }
     draw(ctx){
       ctx.globalCompositeOperation = "lighter";
@@ -646,12 +687,12 @@
       ctx.clearRect(0,0,W,H);
     } else {
       ctx.globalCompositeOperation = "source-over";
-      ctx.fillStyle = "rgba(9,8,15,0.16)";
+      ctx.fillStyle = "rgba(9,8,15,0.12)";
       ctx.fillRect(0,0,W,H);
     }
 
-    const cx = W/2, cy = H*0.52;
-    for(const em of emitters){ em.update(dt, t, cx, cy); em.draw(ctx); }
+    for(const em of emitters){ em.drawBlobs(ctx, W, H, t); }
+    for(const em of emitters){ em.update(dt, t, W, H); em.draw(ctx); }
     emitters = emitters.filter(em=> !em.dead());
 
     requestAnimationFrame(frame);
