@@ -490,7 +490,39 @@
     { id:"oldtoy", name:"Old Toy", emoji:"🧸", blurb:"soft dust, faint vanilla cotton",
       words:["teddy bear","toy","stuffed animal"],
       literal:"A soft, dusty, slightly sweet smell — mostly aged cotton and foam, sometimes with a faint vanilla-like note similar to old books, from years of fabric slowly breaking down.",
-      profile:{sweetness:.3,brightness:.2,acidity:.05,earthiness:.35,freshness:.05,warmth:.35,bitterness:.1,floral:.1,smoke:.1} }
+      profile:{sweetness:.3,brightness:.2,acidity:.05,earthiness:.35,freshness:.05,warmth:.35,bitterness:.1,floral:.1,smoke:.1} },
+    { id:"wetdog", name:"Wet Dog", emoji:"🐕", blurb:"damp musty haze, low animal warmth",
+      words:["dog","puppy","wet dog"],
+      literal:"Musty and damp, with a warm, slightly sour animal note — mostly bacteria breaking down oils on wet fur. Stronger and muskier the wetter, and dirtier, the dog.",
+      profile:{sweetness:0,brightness:.15,acidity:.1,earthiness:.6,freshness:.05,warmth:.3,bitterness:.35,floral:0,smoke:.1} },
+    { id:"stable", name:"Horse Stable", emoji:"🐴", blurb:"warm hay filaments, earthy leather",
+      words:["horse","stable","barn","hay","cow"],
+      literal:"Warm and earthy — a mix of hay, leather, and animal musk. Less sharp than most animal smells; most people find it more pleasant than expected, closer to a barn than manure specifically.",
+      profile:{sweetness:.1,brightness:.3,acidity:.1,earthiness:.7,freshness:.3,warmth:.3,bitterness:.2,floral:.05,smoke:0} },
+    { id:"wool", name:"Wool / Lanolin", emoji:"🐑", blurb:"oily amber wax, low animal warmth",
+      words:["sheep","wool","lanolin"],
+      literal:"Oily and slightly sweet, from lanolin — the natural wax that coats sheep's wool. Raw wool smells stronger and more animal than the washed wool used in clothing.",
+      profile:{sweetness:.1,brightness:.25,acidity:.05,earthiness:.4,freshness:.1,warmth:.3,bitterness:.2,floral:0,smoke:0} },
+    { id:"rubber", name:"Rubber / Road", emoji:"🛞", blurb:"warm black shards, tar haze",
+      words:["car","tire","rubber","road","bicycle","motorcycle","umbrella"],
+      literal:"Warm, sharp, and slightly sweet in a chemical way — heated rubber and tar. Much stronger from a hot tire or a rain-soaked road than from rubber sitting at room temperature.",
+      profile:{sweetness:0,brightness:.2,acidity:.1,earthiness:.1,freshness:.05,warmth:.4,bitterness:.5,floral:0,smoke:.3} },
+    { id:"electronics", name:"New Electronics", emoji:"💻", blurb:"pale static sparks, warm plastic haze",
+      words:["laptop","phone","electronics","gadget","tv"],
+      literal:"A faint, warm plastic smell with a hint of ozone, from heated components and new materials off-gassing. Fades within days as a device airs out.",
+      profile:{sweetness:.1,brightness:.5,acidity:.05,earthiness:.05,freshness:.2,warmth:.2,bitterness:.15,floral:0,smoke:.15} },
+    { id:"surfwax", name:"Surf Wax", emoji:"🏄", blurb:"sweet golden wax, coastal warmth",
+      words:["surfboard","surf wax"],
+      literal:"Sweet and waxy, usually scented with coconut or tropical fragrance on purpose — one of the most recognisable smells in surf culture, closer to sunscreen than anything oceanic.",
+      profile:{sweetness:.6,brightness:.5,acidity:.1,earthiness:.1,freshness:.3,warmth:.3,bitterness:.05,floral:.1,smoke:0} },
+    { id:"freshsnow", name:"Fresh Snow", emoji:"❄️", blurb:"pale cold mist, near-silent air",
+      words:["snow","ski","snowboard","winter"],
+      literal:"Very faint and clean — technically almost scentless, but intense cold changes how everything else smells, giving a sharp, mineral, almost metallic freshness.",
+      profile:{sweetness:0,brightness:.6,acidity:.05,earthiness:.05,freshness:.95,warmth:0,bitterness:.05,floral:0,smoke:0} },
+    { id:"metal", name:"Metal", emoji:"🔪", blurb:"cold silver flicker, sharp thin edge",
+      words:["knife","scissors","metal","fork","spoon"],
+      literal:"Cold and slightly sharp, often described as \"bloodlike\" or coppery — that's actually oils on your skin reacting with the metal, not the metal itself, which is nearly odourless.",
+      profile:{sweetness:0,brightness:.35,acidity:.3,earthiness:.1,freshness:.1,warmth:0,bitterness:.3,floral:0,smoke:0} }
   ];
   const SCENT_BY_ID = {};
   SCENTS.forEach(s=>{ SCENT_BY_ID[s.id] = s; });
@@ -498,7 +530,17 @@
     "banana":"banana", "apple":"apple", "orange":"citrus", "broccoli":"greens",
     "carrot":"carrot", "hot dog":"grilled", "pizza":"pizza", "donut":"donut",
     "cake":"vanilla", "sandwich":"bakery", "wine glass":"wine", "cup":"coffee",
-    "potted plant":"houseplant", "book":"oldbook", "vase":"rose", "teddy bear":"oldtoy"
+    "potted plant":"houseplant", "book":"oldbook", "vase":"rose", "teddy bear":"oldtoy",
+    "dog":"wetdog", "horse":"stable", "sheep":"wool", "cow":"stable",
+    "car":"rubber", "motorcycle":"rubber", "bus":"rubber", "truck":"rubber",
+    "bicycle":"rubber", "skateboard":"rubber", "umbrella":"rubber",
+    "tv":"electronics", "laptop":"electronics", "mouse":"electronics",
+    "remote":"electronics", "keyboard":"electronics", "cell phone":"electronics",
+    "surfboard":"surfwax", "skis":"freshsnow", "snowboard":"freshsnow",
+    "scissors":"metal", "knife":"metal", "fork":"metal", "spoon":"metal",
+    "boat":"ocean", "toaster":"bakery", "toothbrush":"mint",
+    "backpack":"leather", "handbag":"leather", "suitcase":"leather",
+    "tie":"leather", "baseball glove":"leather"
   };
   const DETECT_CONFIDENCE = 0.55;
   const MAX_BOXES = 4;

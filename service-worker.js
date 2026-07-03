@@ -14,7 +14,7 @@
   change to index.html/manifest/icons, so old clients pick up the update
   instead of quietly serving a stale copy from their cache.
 */
-const CACHE_NAME = 'osmos-cache-v2';
+const CACHE_NAME = 'osmos-cache-v3';
 
 const APP_SHELL = [
   './',
