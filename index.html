@@ -168,7 +168,7 @@
     font-family:var(--serif); font-style:italic; font-weight:560; font-size:18px;
     color:var(--paper); opacity:0.92; pointer-events:auto; user-select:none;
   }
-  .icon-row{ display:flex; align-items:center; gap:10px; pointer-events:auto; }
+  .icon-row{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end; pointer-events:auto; }
   .icon-btn{
     width:40px; height:40px; border-radius:50%; border:1px solid var(--line-strong);
     background:var(--panel); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
@@ -201,26 +201,39 @@
   #readout .r-blurb{ opacity:0.8; }
   #readout.empty{ opacity:0; }
 
-  /* ---------- science panel ---------- */
-  #sciencePanel{
+  /* ---------- slide panels (science mode / describe mode) ---------- */
+  .slide-panel{
     position:absolute; top:0; right:0; bottom:0; z-index:35;
     width:min(360px, 92vw); background:var(--panel-solid); border-left:1px solid var(--line);
     padding:88px 26px 26px; overflow-y:auto;
     transform:translateX(100%); transition:transform .45s cubic-bezier(.2,.9,.25,1);
   }
-  #sciencePanel.open{ transform:translateX(0); }
-  #sciencePanel h2{
+  .slide-panel.open{ transform:translateX(0); }
+  .slide-panel h2{
     font-family:var(--serif); font-style:italic; font-weight:500; font-size:22px;
     color:var(--paper); margin:0 0 10px;
   }
-  #sciencePanel p{ font-size:13px; line-height:1.7; color:var(--ink); opacity:0.9; }
-  #sciencePanel .divider{ height:1px; background:var(--line); margin:20px 0; }
+  .slide-panel p{ font-size:13px; line-height:1.7; color:var(--ink); opacity:0.9; }
+  .slide-panel .divider{ height:1px; background:var(--line); margin:20px 0; }
   .sci-label{
     font-family:var(--mono); font-size:10.5px; letter-spacing:0.14em; color:var(--muted);
     text-transform:uppercase; margin-bottom:12px;
   }
   .readout-block{ margin-bottom:22px; }
   .readout-block .rb-name{ font-family:var(--serif); font-style:italic; color:var(--paper); font-size:17px; margin-bottom:10px; }
+  .desc-block{ margin-bottom:24px; }
+  .desc-block .db-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
+  .desc-block .db-name{ font-family:var(--serif); font-style:italic; color:var(--paper); font-size:18px; }
+  .desc-block .db-text{ font-size:15px; line-height:1.75; color:var(--paper); opacity:0.95; }
+  .desc-block .db-empty{ font-size:13px; line-height:1.7; color:var(--muted); font-style:italic; }
+  .listen-btn{
+    flex-shrink:0; display:flex; align-items:center; gap:5px;
+    font-family:var(--mono); font-size:10.5px; letter-spacing:0.03em;
+    background:transparent; border:1px solid var(--line-strong); color:var(--ink);
+    border-radius:999px; padding:6px 11px; cursor:pointer; transition:border-color .2s, color .2s;
+  }
+  .listen-btn:hover{ color:var(--accent); border-color:rgba(143,247,212,0.4); }
+  .listen-btn.speaking{ color:#0a0912; background:var(--accent); border-color:var(--accent); }
   .bar-row{ display:flex; align-items:center; gap:10px; margin-bottom:6px; }
   .bar-row .bl{ width:52px; font-family:var(--mono); font-size:9.5px; letter-spacing:0.06em; color:var(--muted); flex-shrink:0; }
   .bar-track{ flex:1; height:5px; border-radius:3px; background:rgba(255,255,255,0.06); overflow:hidden; }
@@ -280,7 +293,7 @@
 
   @media (max-width: 560px){
     #readout{ bottom:196px; }
-    #sciencePanel{ width:100vw; }
+    .slide-panel{ width:100vw; }
   }
 
   @media (prefers-reduced-motion: reduce){
@@ -304,6 +317,7 @@
     <div class="icon-row">
       <button class="install-pill" id="installBtn" title="Install OSMOS">⇩ Install</button>
       <button class="icon-btn" id="camBtn" title="Toggle camera backdrop" aria-label="Toggle camera">◎</button>
+      <button class="icon-btn" id="describeBtn" title="Plain-language scent descriptions" aria-label="Open scent descriptions">Aa</button>
       <button class="icon-btn" id="sciBtn" title="How this works" aria-label="Open science mode">i</button>
     </div>
   </header>
@@ -315,7 +329,7 @@
     <span class="r-blurb" id="readoutBlurb"></span>
   </div>
 
-  <aside id="sciencePanel">
+  <aside id="sciencePanel" class="slide-panel">
     <div class="sci-label">Science mode</div>
     <h2>This is not what it objectively looks like.</h2>
     <p>OSMOS is an artistic interpretation, not a measurement. It's inspired by documented cases of <em style="color:var(--paper); font-style:normal;">olfactory‑visual synesthesia</em> — a rare condition where a smell involuntarily triggers a consistent visual experience: colour, shape, motion, even texture, with no learned or logical connection to the object itself. That's different from ordinary cross‑modal association, the common, culturally shared sense that lemons "feel" yellow or mint "feels" green.</p>
@@ -324,6 +338,15 @@
     <div class="divider"></div>
     <div class="sci-label">Active signal</div>
     <div id="scienceReadouts"></div>
+  </aside>
+
+  <aside id="describePanel" class="slide-panel" aria-live="polite">
+    <div class="sci-label">Describe mode</div>
+    <h2>What it actually smells like.</h2>
+    <p>This is the literal counterpart to the visuals — plain-language descriptions, not artistic interpretation, written for anyone who can't smell the real thing, whether that's anosmia, a blocked nose, or curiosity. Available for every scent in the library. Use the speaker button to hear a description read aloud.</p>
+    <div class="divider"></div>
+    <div class="sci-label">Active scent</div>
+    <div id="describeReadouts"></div>
   </aside>
 
   <div id="sheet">
@@ -354,90 +377,119 @@
   const SCENTS = [
     { id:"strawberry", name:"Strawberry", emoji:"🍓", blurb:"bright red ribbons, pollen sparks",
       words:["strawberry","berry","berries"],
+      literal:"Sweet and juicy with a slightly green, grassy edge from the leaves. Ripe strawberries smell like sugared berries with a faint tang — similar to strawberry candy, but softer and less artificial.",
       profile:{sweetness:.9,brightness:.7,acidity:.5,earthiness:.1,freshness:.6,warmth:.3,bitterness:.05,floral:.4,smoke:0} },
     { id:"coffee", name:"Coffee", emoji:"☕", blurb:"bronze smoke, slow amber embers",
       words:["coffee","espresso","latte"],
+      literal:"Warm, roasted, and slightly bitter, with notes of toasted nuts, dark chocolate, and caramel. Fresh-ground coffee is sharper and more acidic; brewed coffee mellows into a rounder, smokier warmth.",
       profile:{sweetness:.3,brightness:.2,acidity:.3,earthiness:.7,freshness:.1,warmth:.8,bitterness:.7,floral:.05,smoke:.6} },
     { id:"pine", name:"Pine Forest", emoji:"🌲", blurb:"emerald ribbons, crystal needles",
       words:["pine","forest","fir","conifer","woods"],
+      literal:"Sharp, resinous, and green — like fresh sap and crushed needles. A clean, slightly medicinal freshness, the same family as pine cleaning products but earthier and less synthetic outdoors.",
       profile:{sweetness:.1,brightness:.4,acidity:.2,earthiness:.6,freshness:.9,warmth:.1,bitterness:.3,floral:.1,smoke:.1} },
     { id:"petrichor", name:"Rain / Petrichor", emoji:"🌧️", blurb:"cool mist, silver sheeting",
       words:["rain","petrichor","storm","wet ground"],
+      literal:"An earthy, mineral smell released when rain hits dry soil, often described as simply \"clean,\" with a faint metallic note. It comes from geosmin, the same compound that gives beets their earthy taste.",
       profile:{sweetness:.05,brightness:.5,acidity:.1,earthiness:.8,freshness:.95,warmth:.05,bitterness:.1,floral:.05,smoke:.05} },
     { id:"rose", name:"Rose", emoji:"🌹", blurb:"translucent petals, soft pink bloom",
       words:["rose","roses"],
+      literal:"Sweet and floral with a slightly spicy, honeyed depth. Fresh roses smell lighter and greener than rose perfume, which is usually more concentrated and syrupy.",
       profile:{sweetness:.6,brightness:.6,acidity:.1,earthiness:.1,freshness:.3,warmth:.2,bitterness:.05,floral:.95,smoke:0} },
     { id:"chocolate", name:"Chocolate", emoji:"🍫", blurb:"dark velvet folds, slow warmth",
       words:["chocolate","cocoa","cacao"],
+      literal:"Rich, slightly bitter, and roasted, with a warm sweetness underneath — similar to coffee but rounder and creamier, often with a faint fruity or vanilla note depending on the cacao.",
       profile:{sweetness:.8,brightness:.2,acidity:.1,earthiness:.5,freshness:.05,warmth:.6,bitterness:.4,floral:.1,smoke:.2} },
     { id:"ocean", name:"Ocean Breeze", emoji:"🌊", blurb:"blue transparent sheets, salt haze",
       words:["ocean","sea","beach","salt air"],
+      literal:"Clean, salty, and slightly briny, often mixed with faint seaweed or mineral-wet notes. Sharper and more bracing than most florals — not sweet at all.",
       profile:{sweetness:.1,brightness:.7,acidity:.2,earthiness:.1,freshness:.95,warmth:.1,bitterness:.05,floral:.05,smoke:0} },
     { id:"bakery", name:"Fresh Bread", emoji:"🥖", blurb:"warm gold clouds, soft crust glow",
       words:["bread","bakery","toast","croissant"],
+      literal:"Warm, yeasty, and slightly sweet, with a toasted, nutty edge from the crust — often compared to a mix of malt, popcorn, and warm butter.",
       profile:{sweetness:.5,brightness:.5,acidity:.1,earthiness:.3,freshness:.4,warmth:.7,bitterness:.1,floral:.05,smoke:.2} },
     { id:"citrus", name:"Citrus", emoji:"🍊", blurb:"sharp gold sparks, quick motion",
       words:["citrus","orange","lemon","lime"],
+      literal:"Sharp, bright, and tangy rather than sweet. The peel smells oilier and more bitter than the juicy, sugary scent of the flesh inside.",
       profile:{sweetness:.5,brightness:.9,acidity:.8,earthiness:.05,freshness:.8,warmth:.3,bitterness:.2,floral:.2,smoke:0} },
     { id:"campfire", name:"Campfire", emoji:"🔥", blurb:"turbulent smoke, glowing fractures",
       words:["campfire","bonfire","fire","woodsmoke"],
+      literal:"Dry, sharp, and slightly acrid, like burning wood and charcoal. Clings heavily to fabric and hair — distinct from cigarette smoke, which reads more chemical.",
       profile:{sweetness:.1,brightness:.3,acidity:.05,earthiness:.6,freshness:.1,warmth:.8,bitterness:.5,floral:0,smoke:.95} },
     { id:"lavender", name:"Lavender", emoji:"💜", blurb:"slow violet drift, gentle pulse",
       words:["lavender"],
+      literal:"Soft, herbal, and slightly sweet, with a cooling, almost medicinal edge — similar to rosemary or mint, but rounder and less sharp.",
       profile:{sweetness:.3,brightness:.5,acidity:.1,earthiness:.2,freshness:.5,warmth:.1,bitterness:.2,floral:.8,smoke:0} },
     { id:"vanilla", name:"Vanilla", emoji:"🍦", blurb:"round cream orbs, low glow",
       words:["vanilla"],
+      literal:"Warm, sweet, and creamy, with a faint boozy or woody undertone. Real vanilla is less sugary and more complex than synthetic \"vanilla scent,\" which tends to smell flatter.",
       profile:{sweetness:.9,brightness:.5,acidity:.05,earthiness:.1,freshness:.1,warmth:.5,bitterness:.05,floral:.2,smoke:.1} },
     { id:"leather", name:"Leather", emoji:"🧳", blurb:"dark angular fragments, low light",
       words:["leather"],
+      literal:"Rich, smoky, and slightly sweet, with a musky depth. New leather smells sharper and more chemical from tanning; aged leather is softer and warmer.",
       profile:{sweetness:.1,brightness:.1,acidity:.05,earthiness:.7,freshness:.05,warmth:.5,bitterness:.4,floral:0,smoke:.3} },
     { id:"grass", name:"Cut Grass", emoji:"🌿", blurb:"quick green ribbons, upward rush",
       words:["grass","cut grass","lawn"],
+      literal:"Sharp, green, and slightly bitter — a burst of \"green\" smell released when plant cells are damaged. It fades faster than most scents on this list.",
       profile:{sweetness:.2,brightness:.6,acidity:.2,earthiness:.5,freshness:.9,warmth:.05,bitterness:.3,floral:.1,smoke:0} },
     { id:"cinnamon", name:"Cinnamon", emoji:"🟤", blurb:"black crystalline spikes, warm core",
       words:["cinnamon","spice"],
+      literal:"Warm, sweet, and spicy with a slight heat, almost peppery. Ground cinnamon is dustier and more intense than cinnamon sticks, which read woodier.",
       profile:{sweetness:.5,brightness:.4,acidity:.1,earthiness:.5,freshness:.1,warmth:.8,bitterness:.3,floral:.05,smoke:.2} },
     { id:"mint", name:"Peppermint", emoji:"🌱", blurb:"electric cyan flicker, cold clarity",
       words:["mint","peppermint","menthol"],
+      literal:"Sharp, cool, and sweet, with an unmistakable cooling sensation that's as much a feeling as a smell — that's the menthol. Sharper and more medicinal than spearmint.",
       profile:{sweetness:.3,brightness:.8,acidity:.1,earthiness:.05,freshness:.95,warmth:.05,bitterness:.2,floral:.05,smoke:0} },
     { id:"jasmine", name:"Jasmine", emoji:"🤍", blurb:"woven silk petals, night bloom",
       words:["jasmine"],
+      literal:"Intensely sweet and floral, with an unusual musky undertone that keeps it from being purely \"pretty\" — part of why it's prized in perfumery.",
       profile:{sweetness:.5,brightness:.6,acidity:.1,earthiness:.1,freshness:.4,warmth:.2,bitterness:.05,floral:.9,smoke:0} },
     { id:"oldbook", name:"Old Paper", emoji:"📖", blurb:"amber dust, slow settling fibres",
       words:["old book","paper","library","dust"],
+      literal:"Sweet, woody, and slightly vanilla-like as old paper slowly breaks down — genuinely similar to vanilla and almond at a chemical level, layered over a dusty, musty base.",
       profile:{sweetness:.2,brightness:.2,acidity:.1,earthiness:.6,freshness:.05,warmth:.4,bitterness:.3,floral:.05,smoke:.3} },
     { id:"petrol", name:"Gasoline", emoji:"⛽", blurb:"sharp iridescent slick, jittering edge",
       words:["gasoline","petrol","fuel"],
+      literal:"Sharp, sweet, and chemical, with a distinctive volatile quality that's noticeable even in tiny amounts. Many people find it oddly pleasant despite it being unsafe to breathe in.",
       profile:{sweetness:.05,brightness:.3,acidity:.5,earthiness:.3,freshness:.1,warmth:.3,bitterness:.6,floral:0,smoke:.4} },
     { id:"banana", name:"Banana", emoji:"🍌", blurb:"soft yellow orbs, creamy drift",
       words:["banana"],
+      literal:"Sweet, creamy, and slightly musky. Banana candy often smells \"more banana\" than a real one — the flavouring compound is more concentrated than what ripe bananas naturally produce.",
       profile:{sweetness:.7,brightness:.5,acidity:.15,earthiness:.2,freshness:.3,warmth:.2,bitterness:.05,floral:.1,smoke:0} },
     { id:"apple", name:"Apple", emoji:"🍎", blurb:"crisp bright sparks, clean snap",
       words:["apple"],
+      literal:"Crisp, sweet, and slightly tart, with a light, watery freshness — fainter than most fruit scents. A cut or bruised apple smells sharper as it starts to oxidize.",
       profile:{sweetness:.6,brightness:.6,acidity:.5,earthiness:.1,freshness:.7,warmth:.1,bitterness:.1,floral:.15,smoke:0} },
     { id:"greens", name:"Broccoli", emoji:"🥦", blurb:"angular green shards, mineral bite",
       words:["broccoli","greens","vegetable","cabbage"],
+      literal:"Green and slightly bitter, with a mild sulphurous edge that gets stronger when cooked — the same family of compounds found in cabbage and mustard.",
       profile:{sweetness:.1,brightness:.3,acidity:.1,earthiness:.55,freshness:.5,warmth:.05,bitterness:.55,floral:.05,smoke:0} },
     { id:"carrot", name:"Carrot", emoji:"🥕", blurb:"warm orange filaments, earthy sweetness",
       words:["carrot"],
+      literal:"Earthy and mildly sweet, with a green, woody top note. Milder and less pungent than most root vegetables.",
       profile:{sweetness:.4,brightness:.5,acidity:.1,earthiness:.5,freshness:.4,warmth:.15,bitterness:.15,floral:.05,smoke:0} },
     { id:"grilled", name:"Grilled / BBQ", emoji:"🌭", blurb:"charred smoke, savory haze",
       words:["hot dog","grilled","bbq","barbecue","sausage"],
+      literal:"Smoky, savory, and slightly sweet from caramelizing fat and sugar — the specific smell of browning meat mixed with charcoal smoke.",
       profile:{sweetness:.1,brightness:.2,acidity:.1,earthiness:.3,freshness:.05,warmth:.7,bitterness:.45,floral:0,smoke:.75} },
     { id:"pizza", name:"Pizza", emoji:"🍕", blurb:"warm bready haze, tomato glow",
       words:["pizza"],
+      literal:"Warm and savory: baked dough, melted cheese, and tomato, with a faint char from the crust. A blend rather than a single distinct note.",
       profile:{sweetness:.3,brightness:.3,acidity:.3,earthiness:.3,freshness:.1,warmth:.7,bitterness:.2,floral:.05,smoke:.35} },
     { id:"donut", name:"Donut", emoji:"🍩", blurb:"glazed sugar orbs, fried warmth",
       words:["donut","doughnut"],
+      literal:"Sweet and rich, dominated by fried dough and sugar glaze — similar to funnel cake, warmer and oilier than a baked pastry.",
       profile:{sweetness:.9,brightness:.5,acidity:.05,earthiness:.1,freshness:.05,warmth:.5,bitterness:.1,floral:.1,smoke:.15} },
     { id:"wine", name:"Wine", emoji:"🍷", blurb:"deep fermented ribbons, dark bloom",
       words:["wine"],
+      literal:"Fruity and slightly sour, with a warm, alcoholic sharpness and an earthy undertone from the barrel or grape skins. Reds skew darker and jammier; whites lighter and more floral.",
       profile:{sweetness:.4,brightness:.3,acidity:.4,earthiness:.4,freshness:.15,warmth:.3,bitterness:.3,floral:.3,smoke:.05} },
     { id:"houseplant", name:"Houseplant", emoji:"🪴", blurb:"green mineral drift, still air",
       words:["plant","houseplant","fern"],
+      literal:"A mild, green, mineral smell — mostly damp soil and leaf, without much sweetness. Subtler than outdoor plants since indoor air moves less.",
       profile:{sweetness:.1,brightness:.35,acidity:.1,earthiness:.5,freshness:.7,warmth:.05,bitterness:.25,floral:.15,smoke:0} },
     { id:"oldtoy", name:"Old Toy", emoji:"🧸", blurb:"soft dust, faint vanilla cotton",
       words:["teddy bear","toy","stuffed animal"],
+      literal:"A soft, dusty, slightly sweet smell — mostly aged cotton and foam, sometimes with a faint vanilla-like note similar to old books, from years of fabric slowly breaking down.",
       profile:{sweetness:.3,brightness:.2,acidity:.05,earthiness:.35,freshness:.05,warmth:.35,bitterness:.1,floral:.1,smoke:.1} }
   ];
   const SCENT_BY_ID = {};
@@ -732,6 +784,9 @@
   const flashEl = document.getElementById("flash");
   const sciencePanel = document.getElementById("sciencePanel");
   const sciBtn = document.getElementById("sciBtn");
+  const describeReadouts = document.getElementById("describeReadouts");
+  const describePanel = document.getElementById("describePanel");
+  const describeBtn = document.getElementById("describeBtn");
   const camBtn = document.getElementById("camBtn");
   const camFeed = document.getElementById("camFeed");
   const detectOverlay = document.getElementById("detectOverlay");
@@ -813,6 +868,47 @@
     });
   }
 
+  function speakText(text, btn){
+    if(!("speechSynthesis" in window)) return;
+    const wasSpeaking = btn.classList.contains("speaking");
+    window.speechSynthesis.cancel();
+    document.querySelectorAll(".listen-btn.speaking").forEach(b=>b.classList.remove("speaking"));
+    if(wasSpeaking) return; // clicking an already-speaking button just stops it
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.rate = 0.98;
+    utter.onstart = ()=> btn.classList.add("speaking");
+    utter.onend = ()=> btn.classList.remove("speaking");
+    utter.onerror = ()=> btn.classList.remove("speaking");
+    window.speechSynthesis.speak(utter);
+  }
+
+  function renderDescribe(){
+    describeReadouts.innerHTML = "";
+    if(activeScents.length===0){
+      describeReadouts.innerHTML = `<p style="opacity:.6">Choose a scent to see its description.</p>`;
+      return;
+    }
+    activeScents.forEach(s=>{
+      const block = document.createElement("div");
+      block.className = "desc-block";
+      if(s.literal){
+        block.innerHTML = `
+          <div class="db-head">
+            <div class="db-name">${s.emoji} ${s.name}</div>
+            <button class="listen-btn" type="button" aria-label="Read description aloud">🔊 Listen</button>
+          </div>
+          <div class="db-text">${s.literal}</div>`;
+        const btn = block.querySelector(".listen-btn");
+        btn.addEventListener("click", ()=> speakText(`${s.name}. ${s.literal}`, btn));
+      } else {
+        block.innerHTML = `
+          <div class="db-head"><div class="db-name">${s.emoji} ${s.name}</div></div>
+          <div class="db-empty">No verified description yet for this typed entry — pick a scent from the library below for an accurate, plain-language description.</div>`;
+      }
+      describeReadouts.appendChild(block);
+    });
+  }
+
   function toggleScent(s){
     const idx = activeScents.findIndex(a=>a.id===s.id);
     if(idx>=0){
@@ -832,7 +928,8 @@
       triggerFlash(em.palette);
       hintText.textContent = activeScents.length>1 ? "Blending — signals merge where they overlap." : "";
     }
-    renderPills(); renderChipStates(); renderReadout(); renderScience(); syncBoxActiveStates();
+    if("speechSynthesis" in window) window.speechSynthesis.cancel();
+    renderPills(); renderChipStates(); renderReadout(); renderScience(); renderDescribe(); syncBoxActiveStates();
   }
 
   /* ============================= OBJECT DETECTION ============================= */
@@ -967,8 +1064,21 @@
   });
 
   sciBtn.addEventListener("click", ()=>{
-    sciencePanel.classList.toggle("open");
-    sciBtn.classList.toggle("active");
+    const opening = !sciencePanel.classList.contains("open");
+    sciencePanel.classList.toggle("open", opening);
+    sciBtn.classList.toggle("active", opening);
+    describePanel.classList.remove("open");
+    describeBtn.classList.remove("active");
+    if(!opening && "speechSynthesis" in window) window.speechSynthesis.cancel();
+  });
+
+  describeBtn.addEventListener("click", ()=>{
+    const opening = !describePanel.classList.contains("open");
+    describePanel.classList.toggle("open", opening);
+    describeBtn.classList.toggle("active", opening);
+    sciencePanel.classList.remove("open");
+    sciBtn.classList.remove("active");
+    if(!opening && "speechSynthesis" in window) window.speechSynthesis.cancel();
   });
 
   camBtn.addEventListener("click", async ()=>{
@@ -1006,6 +1116,7 @@
   });
 
   renderScience();
+  renderDescribe();
 })();
 </script>
 <script>
