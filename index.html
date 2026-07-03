@@ -4,6 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>OSMOS — the hidden visual language of smell</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0a0912">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="OSMOS">
+<meta name="description" content="A synesthetic instrument that translates scent into an immersive generative visualization.">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
+<link rel="icon" href="icons/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,560;1,9..144,460;1,9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -157,7 +168,7 @@
     font-family:var(--serif); font-style:italic; font-weight:560; font-size:18px;
     color:var(--paper); opacity:0.92; pointer-events:auto; user-select:none;
   }
-  .icon-row{ display:flex; gap:10px; pointer-events:auto; }
+  .icon-row{ display:flex; align-items:center; gap:10px; pointer-events:auto; }
   .icon-btn{
     width:40px; height:40px; border-radius:50%; border:1px solid var(--line-strong);
     background:var(--panel); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
@@ -167,6 +178,15 @@
   }
   .icon-btn:hover{ color:var(--accent); border-color:rgba(143,247,212,0.4); }
   .icon-btn.active{ color:#0a0912; background:var(--accent); border-color:var(--accent); }
+  .install-pill{
+    display:none; align-items:center; gap:6px;
+    font-family:var(--sans); font-weight:600; font-size:12.5px;
+    background:var(--paper); color:#171320; border:none; border-radius:999px;
+    padding:0 15px; height:40px; cursor:pointer; white-space:nowrap;
+    transition:transform .2s ease, box-shadow .2s ease;
+  }
+  .install-pill.show{ display:inline-flex; }
+  .install-pill:hover{ transform:translateY(-1px); box-shadow:0 8px 22px -8px rgba(143,247,212,0.4); }
 
   /* ---------- readout (bottom-left) ---------- */
   #readout{
@@ -282,6 +302,7 @@
   <header id="topbar">
     <div class="brand">OSMOS</div>
     <div class="icon-row">
+      <button class="install-pill" id="installBtn" title="Install OSMOS">⇩ Install</button>
       <button class="icon-btn" id="camBtn" title="Toggle camera backdrop" aria-label="Toggle camera">◎</button>
       <button class="icon-btn" id="sciBtn" title="How this works" aria-label="Open science mode">i</button>
     </div>
@@ -986,6 +1007,31 @@
 
   renderScience();
 })();
+</script>
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("service-worker.js").catch(()=>{});
+    });
+  }
+  let deferredInstallPrompt = null;
+  const installBtn = document.getElementById("installBtn");
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    installBtn.classList.add("show");
+  });
+  installBtn.addEventListener("click", async () => {
+    if (!deferredInstallPrompt) return;
+    installBtn.classList.remove("show");
+    deferredInstallPrompt.prompt();
+    try { await deferredInstallPrompt.userChoice; } catch(e) {}
+    deferredInstallPrompt = null;
+  });
+  window.addEventListener("appinstalled", () => {
+    installBtn.classList.remove("show");
+    deferredInstallPrompt = null;
+  });
 </script>
 </body>
 </html>
