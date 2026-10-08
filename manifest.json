@@ -1,7 +1,7 @@
 {
   "name": "OSMOS — the hidden visual language of smell",
   "short_name": "OSMOS",
-  "description": "A synesthetic instrument that translates scent into an immersive generative visualization, inspired by reported olfactory-visual synesthesia.",
+  "description": "A synesthetic instrument that translates scent into light and sound using published research on how people match smells to colour, shape and pitch.",
   "start_url": "./index.html",
   "scope": "./",
   "id": "./index.html",
