@@ -10,1201 +10,477 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="OSMOS">
-<meta name="description" content="A synesthetic instrument that translates scent into an immersive generative visualization.">
+<meta name="description" content="A synesthetic instrument that translates scent into light and sound using published research on how people match smells to colour, shape and pitch — and shows where the evidence ends and the art begins.">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
 <link rel="icon" href="icons/favicon.ico">
 <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,560;1,9..144,460;1,9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,560;1,9..144,400;1,9..144,560&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg: #0a0912;
-    --bg-2: #120f1e;
-    --panel: rgba(18,16,28,0.66);
-    --panel-solid: #151222;
-    --paper: #ece4d3;
-    --ink: #c7c2d6;
-    --muted: #7d7891;
-    --accent: #8ff7d4;
-    --accent-warm: #f2b166;
-    --line: rgba(237,231,255,0.09);
-    --line-strong: rgba(237,231,255,0.16);
-    --radius: 18px;
-    --serif: "Fraunces", Georgia, serif;
-    --mono: "IBM Plex Mono", "SF Mono", monospace;
-    --sans: "Inter", -apple-system, sans-serif;
+    --bg:#0a0912; --bg-2:#120f1e;
+    --panel:rgba(18,16,28,0.66); --panel-solid:#13111e; --panel-2:#1a1729;
+    --paper:#ece4d3; --ink:#c7c2d6; --muted:#7d7891; --faint:#4d4960;
+    --accent:#8ff7d4; --accent-warm:#f2b166;
+    --ev:#8ff7d4; --ph:#9ab8ff; --art:#f2b166;
+    --line:rgba(237,231,255,0.09); --line-strong:rgba(237,231,255,0.16);
+    --radius:18px;
+    --serif:"Fraunces", Georgia, serif;
+    --mono:"IBM Plex Mono", "SF Mono", ui-monospace, monospace;
+    --sans:"Inter", -apple-system, system-ui, sans-serif;
+    --safe-b:env(safe-area-inset-bottom, 0px);
   }
   *{ box-sizing:border-box; }
   html,body{
     margin:0; padding:0; width:100%; height:100%;
-    background:var(--bg); color:var(--ink);
-    font-family:var(--sans);
-    overflow:hidden;
-    -webkit-tap-highlight-color:transparent;
+    background:var(--bg); color:var(--ink); font-family:var(--sans);
+    overflow:hidden; -webkit-tap-highlight-color:transparent;
+    -webkit-font-smoothing:antialiased;
   }
+  button{ font:inherit; color:inherit; }
   #app{ position:fixed; inset:0; overflow:hidden; }
 
-  /* ---------- background layers ---------- */
-  #ambient{
-    position:absolute; inset:-10%;
-    background:
-      radial-gradient(38% 30% at 22% 18%, rgba(143,247,212,0.06), transparent 60%),
-      radial-gradient(45% 38% at 80% 76%, rgba(242,177,102,0.05), transparent 60%),
-      radial-gradient(70% 60% at 50% 100%, rgba(120,90,190,0.08), transparent 70%),
-      var(--bg);
-    animation: drift 34s ease-in-out infinite alternate;
-  }
-  @keyframes drift{
-    0%{ transform: translate3d(0,0,0) scale(1); }
-    100%{ transform: translate3d(-2%,-1.5%,0) scale(1.04); }
-  }
+  /* ---------- stage ---------- */
   #camFeed{
-    position:absolute; inset:0; width:100%; height:100%;
-    object-fit:cover; opacity:0; transition:opacity .8s ease;
-    filter:saturate(0.9) brightness(0.55) contrast(1.05);
+    position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+    opacity:0; transition:opacity .8s ease;
+    filter:saturate(0.85) brightness(0.6) contrast(1.05);
   }
   #camFeed.on{ opacity:1; }
-  canvas#viz{ position:absolute; inset:0; width:100%; height:100%; display:block; }
+  canvas#viz{ position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:none; }
+  body.cam canvas#viz{ mix-blend-mode:screen; }
   #detectOverlay{ position:absolute; inset:0; pointer-events:none; }
   .detect-box{
-    position:absolute; border:1.5px solid rgba(143,247,212,0.7);
-    border-radius:12px; background:rgba(143,247,212,0.05);
-    box-shadow:0 0 0 1px rgba(143,247,212,0.08) inset;
+    position:absolute; border:1.5px solid rgba(143,247,212,0.7); border-radius:12px;
+    background:rgba(143,247,212,0.05);
     transition:left .35s cubic-bezier(.2,.8,.3,1), top .35s cubic-bezier(.2,.8,.3,1),
-      width .35s cubic-bezier(.2,.8,.3,1), height .35s cubic-bezier(.2,.8,.3,1),
-      border-color .25s, background .25s;
+      width .35s cubic-bezier(.2,.8,.3,1), height .35s cubic-bezier(.2,.8,.3,1), border-color .25s, background .25s;
     pointer-events:auto; cursor:pointer;
   }
-  .detect-box:hover{ border-color:rgba(143,247,212,0.95); }
   .detect-box.active{ border-color:rgba(242,177,102,0.85); background:rgba(242,177,102,0.08); }
   .detect-box .tag{
-    position:absolute; top:-31px; left:-1.5px;
-    font-family:var(--mono); font-size:11px; letter-spacing:0.02em;
+    position:absolute; top:-31px; left:-1.5px; font-family:var(--mono); font-size:11px;
     background:var(--accent); color:#0a0912; padding:5px 10px 5px 8px;
     border-radius:8px 8px 8px 3px; white-space:nowrap;
-    display:flex; align-items:center; gap:5px;
   }
+  .detect-box .tag small{ opacity:.6; }
   .detect-box.active .tag{ background:var(--accent-warm); }
-  #camStatus{
-    position:absolute; top:66px; right:20px; z-index:30;
-    font-family:var(--mono); font-size:10.5px; letter-spacing:0.04em; color:var(--muted);
-    background:var(--panel); border:1px solid var(--line); border-radius:10px;
-    padding:8px 12px; max-width:230px; line-height:1.5; text-align:right; opacity:0; pointer-events:none;
-    transition:opacity .3s ease;
-  }
-  #camStatus.show{ opacity:1; }
-  #vignette{
-    position:absolute; inset:0; pointer-events:none;
-    background: radial-gradient(130% 100% at 50% 42%, transparent 52%, rgba(6,5,10,0.38) 100%);
-    mix-blend-mode:multiply;
-  }
-  #grain{
-    position:absolute; inset:0; pointer-events:none; opacity:0.05; mix-blend-mode:overlay;
-    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
-  }
   #flash{
     position:absolute; inset:0; pointer-events:none; opacity:0;
-    background: radial-gradient(circle at 50% 46%, var(--flash-color, rgba(200,220,255,0.9)) 0%, transparent 62%);
+    background:radial-gradient(circle at 50% 46%, var(--flash-color, rgba(200,220,255,0.9)) 0%, transparent 62%);
   }
-  #flash.burst{ animation: bloom 1.15s cubic-bezier(.16,.9,.28,1) forwards; }
-  @keyframes bloom{
-    0%{ opacity:0; transform:scale(0.25); }
-    18%{ opacity:0.85; }
-    100%{ opacity:0; transform:scale(2.3); }
-  }
+  #flash.burst{ animation:bloom 1.15s cubic-bezier(.16,.9,.28,1) forwards; }
+  @keyframes bloom{ 0%{opacity:0; transform:scale(.25);} 18%{opacity:.55;} 100%{opacity:0; transform:scale(2.3);} }
 
   /* ---------- landing ---------- */
   #landing{
-    position:absolute; inset:0; z-index:40;
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    text-align:center; padding:8vh 6vw;
-    background:linear-gradient(180deg, rgba(8,7,14,0.35), rgba(8,7,14,0.72) 70%, rgba(8,7,14,0.92));
+    position:absolute; inset:0; z-index:60; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; text-align:center; padding:8vh 6vw;
+    background:radial-gradient(120% 90% at 50% 45%, rgba(8,7,14,0.15), rgba(8,7,14,0.7) 70%, rgba(8,7,14,0.92));
     transition:opacity .9s ease, visibility .9s;
   }
   #landing.hidden{ opacity:0; visibility:hidden; pointer-events:none; }
-  .eyebrow{
-    font-family:var(--mono); font-size:11px; letter-spacing:0.32em; text-transform:uppercase;
-    color:var(--accent); opacity:0.85; margin-bottom:22px;
-  }
-  h1.wordmark{
-    font-family:var(--serif); font-weight:560; font-style:italic;
-    font-size:clamp(52px, 12vw, 108px); line-height:0.92; margin:0;
-    color:var(--paper); letter-spacing:-0.01em;
-  }
-  .tagline{
-    font-family:var(--mono); font-size:13px; letter-spacing:0.08em;
-    color:var(--muted); margin-top:18px; text-transform:uppercase;
-  }
-  .lede{
-    max-width:520px; font-family:var(--sans); font-size:15.5px; line-height:1.65;
-    color:var(--ink); margin:26px 0 36px; opacity:0.9;
-  }
+  #sheet, #topbar{ transition:opacity .6s ease; }
+  body.landing #sheet, body.landing #topbar{ opacity:0; pointer-events:none; }
+  .eyebrow{ font-family:var(--mono); font-size:11px; letter-spacing:.32em; text-transform:uppercase; color:var(--accent); opacity:.85; margin-bottom:22px; }
+  h1.wordmark{ font-family:var(--serif); font-weight:560; font-style:italic; font-size:clamp(56px,13vw,120px); line-height:.92; margin:0; color:var(--paper); letter-spacing:-.01em; }
+  .tagline{ font-family:var(--mono); font-size:12.5px; letter-spacing:.08em; color:var(--muted); margin-top:18px; text-transform:uppercase; }
+  .lede{ max-width:540px; font-size:15.5px; line-height:1.65; color:var(--ink); margin:26px 0 22px; }
   .lede em{ color:var(--paper); font-style:normal; }
+  .stats{ display:flex; gap:22px; justify-content:center; flex-wrap:wrap; margin:0 0 30px; font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; color:var(--muted); text-transform:uppercase; }
+  .stats b{ display:block; font-family:var(--serif); font-style:italic; font-weight:400; font-size:26px; color:var(--paper); letter-spacing:0; text-transform:none; margin-bottom:2px; }
   .enter-btn{
-    font-family:var(--sans); font-weight:600; font-size:14.5px;
-    background:var(--paper); color:#171320; border:none; border-radius:999px;
-    padding:15px 34px; cursor:pointer; letter-spacing:0.01em;
-    transition:transform .25s ease, box-shadow .25s ease;
-    box-shadow:0 0 0 0 rgba(143,247,212,0);
+    font-weight:600; font-size:14.5px; background:var(--paper); color:#171320; border:none; border-radius:999px;
+    padding:15px 38px; cursor:pointer; transition:transform .25s ease, box-shadow .25s ease;
   }
-  .enter-btn:hover{ transform:translateY(-2px); box-shadow:0 10px 30px -8px rgba(143,247,212,0.35); }
-  .enter-btn:focus-visible, button:focus-visible, input:focus-visible, .chip:focus-visible{
-    outline:2px solid var(--accent); outline-offset:2px;
-  }
-  .fine{
-    margin-top:20px; font-family:var(--mono); font-size:10.5px; letter-spacing:0.05em;
-    color:var(--muted); max-width:420px;
-  }
+  .enter-btn:hover{ transform:translateY(-2px); box-shadow:0 10px 30px -8px rgba(143,247,212,.35); }
+  .fine{ margin-top:20px; font-family:var(--mono); font-size:10.5px; letter-spacing:.04em; color:var(--muted); max-width:440px; line-height:1.6; }
+  :focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
 
   /* ---------- top bar ---------- */
-  #topbar{
-    position:absolute; top:0; left:0; right:0; z-index:36;
-    display:flex; align-items:center; justify-content:space-between;
-    padding:20px 22px; pointer-events:none;
-  }
-  #topbar .brand{
-    font-family:var(--serif); font-style:italic; font-weight:560; font-size:18px;
-    color:var(--paper); opacity:0.92; pointer-events:auto; user-select:none;
-    background:none; border:none; padding:6px 2px; cursor:pointer;
-    transition:opacity .2s;
-  }
-  #topbar .brand:hover{ opacity:1; }
-  .icon-row{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end; pointer-events:auto; }
+  #topbar{ position:absolute; top:0; left:0; right:0; z-index:50; display:flex; align-items:center; justify-content:space-between; padding:max(16px, env(safe-area-inset-top)) 18px 16px; pointer-events:none; }
+  #topbar .brand{ font-family:var(--serif); font-style:italic; font-weight:560; font-size:19px; color:var(--paper); pointer-events:auto; background:none; border:none; padding:6px 2px; cursor:pointer; }
+  .icon-row{ display:flex; align-items:center; gap:7px; flex-wrap:wrap; justify-content:flex-end; pointer-events:auto; }
   .icon-btn{
     width:40px; height:40px; border-radius:50%; border:1px solid var(--line-strong);
     background:var(--panel); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
-    color:var(--ink); display:flex; align-items:center; justify-content:center;
-    cursor:pointer; transition:border-color .2s, color .2s, background .2s;
-    font-family:var(--mono); font-size:14px;
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+    transition:border-color .2s, color .2s, background .2s; font-family:var(--mono); font-size:14px; padding:0;
   }
-  .icon-btn:hover{ color:var(--accent); border-color:rgba(143,247,212,0.4); }
+  .icon-btn svg{ width:18px; height:18px; stroke:currentColor; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
+  .icon-btn:hover{ color:var(--accent); border-color:rgba(143,247,212,.4); }
   .icon-btn.active{ color:#0a0912; background:var(--accent); border-color:var(--accent); }
-  .install-pill{
-    display:none; align-items:center; gap:6px;
-    font-family:var(--sans); font-weight:600; font-size:12.5px;
-    background:var(--paper); color:#171320; border:none; border-radius:999px;
-    padding:0 15px; height:40px; cursor:pointer; white-space:nowrap;
-    transition:transform .2s ease, box-shadow .2s ease;
-  }
+  .install-pill{ display:none; align-items:center; gap:6px; font-weight:600; font-size:12.5px; background:var(--paper); color:#171320; border:none; border-radius:999px; padding:0 15px; height:40px; cursor:pointer; }
   .install-pill.show{ display:inline-flex; }
-  .install-pill:hover{ transform:translateY(-1px); box-shadow:0 8px 22px -8px rgba(143,247,212,0.4); }
 
-  /* ---------- readout (bottom-left) ---------- */
-  #readout{
-    position:absolute; left:22px; bottom:172px; z-index:20;
-    font-family:var(--mono); font-size:11px; letter-spacing:0.04em; color:var(--muted);
-    max-width:280px; pointer-events:none; transition:opacity .4s;
-  }
-  #readout .r-name{
-    color:var(--paper); font-family:var(--serif); font-style:italic; font-weight:500;
-    font-size:20px; display:block; margin-bottom:4px;
-  }
-  #readout .r-blurb{ opacity:0.8; }
-  #readout.empty{ opacity:0; }
+  /* ---------- readout ---------- */
+  #readout{ position:relative; max-width:min(560px, 100%); pointer-events:none; margin:0 4px 12px; }
+  #readout.empty{ display:none; }
+  #readout .r-name{ color:var(--paper); font-family:var(--serif); font-style:italic; font-size:22px; display:block; margin-bottom:5px; line-height:1.15; }
+  #readout .r-blurb{ font-family:var(--mono); font-size:11px; letter-spacing:.03em; color:var(--ink); opacity:.75; display:block; line-height:1.5; }
+  #readout .r-meta{ font-family:var(--mono); font-size:10px; letter-spacing:.06em; color:var(--muted); display:block; margin-top:6px; }
 
-  /* ---------- slide panels (science mode / describe mode) ---------- */
+  /* ---------- toast ---------- */
+  #toast{
+    position:absolute; left:50%; top:calc(72px + env(safe-area-inset-top)); transform:translate(-50%, -8px); z-index:70;
+    background:var(--panel-solid); border:1px solid var(--line-strong); border-radius:14px;
+    padding:11px 14px; font-size:13px; line-height:1.5; color:var(--ink); max-width:min(440px, calc(100vw - 32px));
+    opacity:0; pointer-events:none; transition:opacity .3s, transform .3s; box-shadow:0 18px 40px -18px rgba(0,0,0,.7);
+  }
+  #toast.show{ opacity:1; transform:translate(-50%,0); pointer-events:auto; }
+  #toast .t-actions{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  #toast .t-actions button{ text-align:left; white-space:nowrap; font-family:var(--mono); font-size:11px; background:transparent; border:1px solid var(--line-strong); border-radius:999px; padding:5px 10px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
+  #toast .t-actions button:hover{ border-color:var(--accent); color:var(--accent); }
+
+  /* ---------- glyph ---------- */
+  .glyph{ display:inline-block; flex-shrink:0; vertical-align:middle; }
+
+  /* ---------- slide panels ---------- */
   .slide-panel{
-    position:absolute; top:0; right:0; bottom:0; z-index:35;
-    width:min(360px, 92vw); background:var(--panel-solid); border-left:1px solid var(--line);
-    padding:88px 26px 26px; overflow-y:auto;
-    transform:translateX(100%); transition:transform .45s cubic-bezier(.2,.9,.25,1);
+    position:absolute; top:0; right:0; bottom:0; z-index:45; width:min(400px, 100vw);
+    background:var(--panel-solid); border-left:1px solid var(--line);
+    padding:calc(80px + env(safe-area-inset-top)) 24px calc(30px + var(--safe-b)); overflow-y:auto; overscroll-behavior:contain;
+    transform:translateX(100%); transition:transform .45s cubic-bezier(.2,.9,.25,1); visibility:hidden;
   }
-  .slide-panel.open{ transform:translateX(0); }
+  .slide-panel.wide{ width:min(640px, 100vw); }
+  .slide-panel.open{ transform:translateX(0); visibility:visible; }
   .panel-close{
-    position:absolute; top:20px; right:20px; z-index:2;
-    width:34px; height:34px; border-radius:50%;
-    border:1px solid var(--line-strong); background:var(--panel);
-    color:var(--ink); display:flex; align-items:center; justify-content:center;
-    cursor:pointer; font-family:var(--mono); font-size:15px; line-height:1;
-    transition:border-color .2s, color .2s, background .2s;
+    position:absolute; top:calc(70px + env(safe-area-inset-top)); right:18px; z-index:2; width:34px; height:34px; border-radius:50%;
+    border:1px solid var(--line-strong); background:var(--panel); display:flex; align-items:center; justify-content:center;
+    cursor:pointer; font-family:var(--mono); font-size:15px; line-height:1; padding:0;
   }
   .panel-close:hover{ color:#0a0912; background:var(--accent); border-color:var(--accent); }
-  .slide-panel h2{
-    font-family:var(--serif); font-style:italic; font-weight:500; font-size:22px;
-    color:var(--paper); margin:0 0 10px;
-  }
-  .slide-panel p{ font-size:13px; line-height:1.7; color:var(--ink); opacity:0.9; }
-  .slide-panel .divider{ height:1px; background:var(--line); margin:20px 0; }
-  .sci-label{
-    font-family:var(--mono); font-size:10.5px; letter-spacing:0.14em; color:var(--muted);
-    text-transform:uppercase; margin-bottom:12px;
-  }
-  .readout-block{ margin-bottom:22px; }
-  .readout-block .rb-name{ font-family:var(--serif); font-style:italic; color:var(--paper); font-size:17px; margin-bottom:10px; }
-  .desc-block{ margin-bottom:24px; }
-  .desc-block .db-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
-  .desc-block .db-name{ font-family:var(--serif); font-style:italic; color:var(--paper); font-size:18px; }
-  .desc-block .db-text{ font-size:15px; line-height:1.75; color:var(--paper); opacity:0.95; }
-  .desc-block .db-empty{ font-size:13px; line-height:1.7; color:var(--muted); font-style:italic; }
-  .listen-btn{
-    flex-shrink:0; display:flex; align-items:center; gap:5px;
-    font-family:var(--mono); font-size:10.5px; letter-spacing:0.03em;
-    background:transparent; border:1px solid var(--line-strong); color:var(--ink);
-    border-radius:999px; padding:6px 11px; cursor:pointer; transition:border-color .2s, color .2s;
-  }
-  .listen-btn:hover{ color:var(--accent); border-color:rgba(143,247,212,0.4); }
+  .slide-panel h2{ font-family:var(--serif); font-style:italic; font-weight:400; font-size:24px; color:var(--paper); margin:0 0 10px; line-height:1.2; }
+  .slide-panel h3{ font-family:var(--serif); font-style:italic; font-weight:400; font-size:18px; color:var(--paper); margin:0 0 8px; }
+  .slide-panel p{ font-size:13.5px; line-height:1.7; color:var(--ink); margin:0 0 12px; }
+  .slide-panel p em{ color:var(--paper); font-style:normal; }
+  .divider{ height:1px; background:var(--line); margin:24px 0; }
+  .sci-label{ font-family:var(--mono); font-size:10.5px; letter-spacing:.14em; color:var(--muted); text-transform:uppercase; margin-bottom:12px; }
+  .badge{ display:inline-block; font-family:var(--mono); font-size:9px; letter-spacing:.1em; text-transform:uppercase; padding:2px 7px; border-radius:999px; border:1px solid currentColor; white-space:nowrap; line-height:1.5; }
+  .badge.ev{ color:var(--ev); } .badge.ph{ color:var(--ph); } .badge.art{ color:var(--art); }
+
+  /* science: per-scent signal */
+  .sig{ margin-bottom:30px; }
+  .sig-head{ display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+  .sig-head .nm{ font-family:var(--serif); font-style:italic; font-size:19px; color:var(--paper); line-height:1.2; }
+  .sig-head .sub{ font-family:var(--mono); font-size:10px; color:var(--muted); letter-spacing:.05em; margin-top:2px; }
+  .radar{ width:100%; max-width:330px; display:block; margin:6px auto 10px; }
+  .radar text{ font-family:var(--mono); font-size:8.5px; fill:var(--ink); letter-spacing:.04em; }
+  .scale-row{ display:grid; grid-template-columns:86px 1fr 46px; align-items:center; gap:10px; margin-bottom:8px; font-family:var(--mono); font-size:10px; color:var(--muted); letter-spacing:.05em; }
+  .scale-row .val{ text-align:right; color:var(--ink); }
+  .track{ position:relative; height:6px; border-radius:3px; background:rgba(255,255,255,.07); }
+  .track .fill{ position:absolute; top:0; bottom:0; border-radius:3px; }
+  .track .mid{ position:absolute; left:50%; top:-3px; bottom:-3px; width:1px; background:var(--line-strong); }
+  .track .ticks{ position:absolute; inset:-14px 0 auto 0; display:flex; justify-content:space-between; font-size:8px; color:var(--faint); }
+  .derive{ width:100%; border-collapse:collapse; margin-top:12px; font-size:12px; }
+  .derive td{ padding:8px 0; border-top:1px solid var(--line); vertical-align:top; line-height:1.45; }
+  .derive td:first-child{ font-family:var(--mono); font-size:10px; letter-spacing:.06em; color:var(--muted); text-transform:uppercase; width:86px; padding-right:8px; padding-top:10px; }
+  .derive td:last-child{ text-align:right; padding-left:8px; padding-top:9px; }
+  .derive .v{ color:var(--paper); }
+  .derive .why{ display:block; font-size:11px; color:var(--muted); margin-top:2px; }
+  .swatch{ display:inline-block; width:12px; height:12px; border-radius:3px; vertical-align:-1px; margin-right:6px; border:1px solid rgba(255,255,255,.15); }
+  .gauge{ display:inline-flex; align-items:center; gap:6px; font-family:var(--mono); font-size:10px; color:var(--muted); }
+  .gauge .g{ width:70px; height:4px; border-radius:2px; background:linear-gradient(90deg, rgba(255,255,255,.15), rgba(255,255,255,.15)); position:relative; }
+  .gauge .g i{ position:absolute; top:-3px; width:2px; height:10px; background:var(--paper); border-radius:1px; }
+
+  .maptable{ width:100%; border-collapse:collapse; font-size:12px; }
+  .maptable th{ text-align:left; font-family:var(--mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:500; padding:0 0 8px; }
+  .maptable td{ padding:10px 6px 10px 0; border-top:1px solid var(--line); vertical-align:top; line-height:1.5; }
+  .maptable td:first-child{ color:var(--paper); width:30%; }
+  .maptable td .cite{ display:block; font-size:10.5px; color:var(--muted); margin-top:3px; font-family:var(--mono); }
+  .refs{ list-style:none; padding:0; margin:0; font-size:11.5px; line-height:1.55; color:var(--ink); }
+  .refs li{ margin-bottom:9px; padding-left:14px; text-indent:-14px; }
+  .refs a{ color:var(--accent); text-decoration:none; border-bottom:1px solid rgba(143,247,212,.3); }
+  .toggle-row{ display:flex; align-items:flex-start; justify-content:space-between; gap:14px; padding:12px 0; border-top:1px solid var(--line); }
+  .toggle-row .tl{ font-size:13px; color:var(--paper); }
+  .toggle-row .td{ font-size:11.5px; color:var(--muted); line-height:1.5; margin-top:3px; }
+  .switch{ flex-shrink:0; width:42px; height:24px; border-radius:999px; border:1px solid var(--line-strong); background:rgba(255,255,255,.06); position:relative; cursor:pointer; padding:0; margin-top:2px; }
+  .switch::after{ content:""; position:absolute; top:3px; left:3px; width:16px; height:16px; border-radius:50%; background:var(--muted); transition:transform .2s, background .2s; }
+  .switch[aria-checked="true"]{ background:rgba(143,247,212,.18); border-color:rgba(143,247,212,.5); }
+  .switch[aria-checked="true"]::after{ transform:translateX(18px); background:var(--accent); }
+
+  /* describe */
+  .desc-block{ margin-bottom:28px; }
+  .db-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+  .db-name{ font-family:var(--serif); font-style:italic; color:var(--paper); font-size:20px; display:flex; align-items:center; gap:10px; }
+  .db-text{ font-size:15.5px; line-height:1.75; color:var(--paper); }
+  .db-meta{ margin-top:12px; font-size:12.5px; line-height:1.6; color:var(--ink); }
+  .db-meta b{ font-family:var(--mono); font-weight:500; font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); display:block; margin-bottom:3px; }
+  .db-meta + .db-meta{ margin-top:10px; }
+  .db-empty{ font-size:13px; line-height:1.7; color:var(--muted); font-style:italic; }
+  .listen-btn{ flex-shrink:0; display:flex; align-items:center; gap:6px; font-family:var(--mono); font-size:10.5px; background:transparent; border:1px solid var(--line-strong); border-radius:999px; padding:6px 11px; cursor:pointer; }
+  .listen-btn:hover{ color:var(--accent); border-color:rgba(143,247,212,.4); }
   .listen-btn.speaking{ color:#0a0912; background:var(--accent); border-color:var(--accent); }
-  .bar-row{ display:flex; align-items:center; gap:10px; margin-bottom:6px; }
-  .bar-row .bl{ width:52px; font-family:var(--mono); font-size:9.5px; letter-spacing:0.06em; color:var(--muted); flex-shrink:0; }
-  .bar-track{ flex:1; height:5px; border-radius:3px; background:rgba(255,255,255,0.06); overflow:hidden; }
-  .bar-fill{ height:100%; border-radius:3px; background:linear-gradient(90deg, var(--accent), var(--accent-warm)); }
+
+  /* library */
+  .lib-tools{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:12px; }
+  .seg{ display:inline-flex; border:1px solid var(--line-strong); border-radius:999px; padding:3px; }
+  .seg button{ background:none; border:none; border-radius:999px; padding:6px 13px; font-family:var(--mono); font-size:11px; cursor:pointer; color:var(--muted); }
+  .seg button.on{ background:var(--paper); color:#171320; }
+  .lib-select{ background:var(--panel-2); color:var(--ink); border:1px solid var(--line-strong); border-radius:999px; padding:7px 12px; font-family:var(--mono); font-size:11px; }
+  #libSearch{ width:100%; background:var(--panel-2); border:1px solid var(--line-strong); border-radius:12px; padding:11px 14px; color:var(--paper); font-size:14px; margin-bottom:10px; }
+  .cat-tabs{ display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; padding-bottom:2px; }
+  .cat-tabs::-webkit-scrollbar{ display:none; }
+  .cat-tab{ flex:0 0 auto; font-family:var(--mono); font-size:10.5px; letter-spacing:.04em; padding:6px 11px; border-radius:999px; border:1px solid var(--line); background:transparent; color:var(--muted); cursor:pointer; white-space:nowrap; }
+  .cat-tab.on{ color:var(--paper); border-color:var(--line-strong); background:rgba(255,255,255,.06); }
+  .lib-count{ font-family:var(--mono); font-size:10px; color:var(--muted); letter-spacing:.06em; margin:14px 0 10px; }
+  .lib-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(138px,1fr)); gap:10px; }
+  .lib-card{ text-align:left; background:var(--panel-2); border:1px solid var(--line); border-radius:14px; padding:12px; cursor:pointer; display:flex; flex-direction:column; gap:8px; transition:border-color .2s, transform .15s; min-width:0; }
+  .lib-card:hover{ border-color:var(--line-strong); transform:translateY(-1px); }
+  .lib-card.on{ border-color:rgba(143,247,212,.55); background:rgba(143,247,212,.07); }
+  .lib-card .nm{ font-size:13px; color:var(--paper); line-height:1.25; }
+  .lib-card .ct{ font-family:var(--mono); font-size:9px; letter-spacing:.06em; color:var(--muted); text-transform:uppercase; }
+  .mini{ display:grid; grid-template-columns:12px 1fr; gap:3px 6px; align-items:center; font-family:var(--mono); font-size:8px; color:var(--faint); }
+  .mini .mt{ height:3px; border-radius:2px; background:rgba(255,255,255,.07); position:relative; overflow:hidden; }
+  .mini .mt i{ position:absolute; top:0; bottom:0; left:0; background:var(--ink); opacity:.55; border-radius:2px; }
+  .lib-map{ width:100%; display:block; background:var(--panel-2); border:1px solid var(--line); border-radius:14px; touch-action:manipulation; }
+  .lib-map text{ font-family:var(--mono); }
+  .lib-map .pt{ cursor:pointer; }
+  .lib-map .pt:hover .lbl, .lib-map .pt.on .lbl{ opacity:1; }
+  .lib-map .lbl{ opacity:0; font-size:10px; fill:var(--paper); pointer-events:none; paint-order:stroke; stroke:#13111e; stroke-width:3px; }
+  .map-note{ font-size:11.5px; color:var(--muted); line-height:1.55; margin-top:10px; }
 
   /* ---------- bottom sheet ---------- */
   #sheet{
     position:absolute; left:0; right:0; bottom:0; z-index:25;
-    background:linear-gradient(180deg, transparent, rgba(8,7,14,0.55) 22%, rgba(9,8,15,0.94) 60%);
-    padding:34px 20px calc(18px + env(safe-area-inset-bottom)) 20px;
+    background:linear-gradient(180deg, transparent, rgba(8,7,14,.55) 20%, rgba(9,8,15,.94) 56%);
+    padding:30px 16px calc(14px + var(--safe-b));
   }
-  #pillRow{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; min-height:0; }
-  .pill{
-    display:inline-flex; align-items:center; gap:6px;
-    font-family:var(--mono); font-size:11.5px; color:#0a0912;
-    background:var(--accent); border-radius:999px; padding:6px 12px 6px 10px;
-    cursor:pointer; border:none;
-  }
-  .pill.b2{ background:var(--accent-warm); }
-  .pill.b3{ background:var(--paper); }
-  .pill .x{ opacity:0.6; font-size:13px; }
-
-  .search-row{ display:flex; gap:8px; margin-bottom:14px; }
+  #pillRow{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+  .pill{ display:inline-flex; align-items:center; gap:7px; font-family:var(--mono); font-size:11.5px; color:var(--paper); background:rgba(20,18,32,.85); border:1px solid var(--line-strong); border-radius:999px; padding:5px 11px 5px 6px; cursor:pointer; }
+  .pill .ad{ font-size:9.5px; color:var(--muted); }
+  .pill .x{ opacity:.55; font-size:12px; margin-left:2px; }
+  .pill:hover{ border-color:rgba(255,255,255,.3); }
+  .search-wrap{ position:relative; margin-bottom:10px; }
+  .search-row{ display:flex; gap:8px; }
   #searchInput{
-    flex:1; background:var(--panel); border:1px solid var(--line-strong); border-radius:14px;
-    padding:14px 16px; color:var(--paper); font-family:var(--sans); font-size:14.5px;
-    backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+    flex:1; min-width:0; background:var(--panel); border:1px solid var(--line-strong); border-radius:14px; padding:13px 15px;
+    color:var(--paper); font-size:15px; backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
   }
   #searchInput::placeholder{ color:var(--muted); }
-  #surpriseBtn{
-    font-family:var(--mono); font-size:11px; letter-spacing:0.04em; white-space:nowrap;
-    background:transparent; border:1px solid var(--line-strong); color:var(--ink);
-    border-radius:14px; padding:0 16px; cursor:pointer; transition:border-color .2s, color .2s;
+  .ghost-btn{ font-family:var(--mono); font-size:11px; letter-spacing:.03em; white-space:nowrap; background:transparent; border:1px solid var(--line-strong); border-radius:14px; padding:0 14px; cursor:pointer; }
+  .ghost-btn:hover{ color:var(--accent); border-color:rgba(143,247,212,.4); }
+  #suggest{
+    position:absolute; left:0; right:0; bottom:calc(100% + 6px); background:var(--panel-solid); border:1px solid var(--line-strong);
+    border-radius:14px; padding:6px; display:none; box-shadow:0 -18px 40px -20px rgba(0,0,0,.8); max-height:300px; overflow-y:auto;
   }
-  #surpriseBtn:hover{ color:var(--accent); border-color:rgba(143,247,212,0.4); }
-
-  #chipRow{
-    display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; scrollbar-width:none;
-  }
+  #suggest.show{ display:block; }
+  .sg{ display:flex; align-items:center; gap:10px; width:100%; text-align:left; background:none; border:none; border-radius:10px; padding:8px 9px; cursor:pointer; font-size:14px; color:var(--paper); }
+  .sg .c{ margin-left:auto; font-family:var(--mono); font-size:9.5px; color:var(--muted); letter-spacing:.05em; text-transform:uppercase; }
+  .sg.sel, .sg:hover{ background:rgba(255,255,255,.06); }
+  .sg.desc{ color:var(--ink); font-size:12.5px; }
+  #sheetCats{ margin-bottom:8px; }
+  #chipRow{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; scrollbar-width:none; scroll-behavior:smooth; }
   #chipRow::-webkit-scrollbar{ display:none; }
   .chip{
-    flex:0 0 auto; display:flex; align-items:center; gap:7px;
-    font-family:var(--sans); font-size:13px; color:var(--ink);
-    background:var(--panel); border:1px solid var(--line); border-radius:999px;
-    padding:9px 15px 9px 11px; cursor:pointer; transition:border-color .2s, transform .15s, background .2s;
-    user-select:none;
+    flex:0 0 auto; display:flex; align-items:center; gap:7px; font-size:13px; background:var(--panel); border:1px solid var(--line);
+    border-radius:999px; padding:7px 14px 7px 8px; cursor:pointer; transition:border-color .2s, transform .15s, background .2s, opacity .2s; user-select:none;
   }
-  .chip .em{ font-size:16px; }
   .chip:hover{ border-color:var(--line-strong); transform:translateY(-1px); }
-  .chip.active{ background:rgba(143,247,212,0.12); border-color:rgba(143,247,212,0.5); color:var(--paper); }
-  .chip.dim{ opacity:0.35; }
+  .chip.active{ background:rgba(143,247,212,.12); border-color:rgba(143,247,212,.5); color:var(--paper); }
+  .chip.dim{ opacity:.35; }
+  .hint{ font-family:var(--mono); font-size:10px; letter-spacing:.04em; color:var(--muted); text-align:center; margin-top:10px; min-height:14px; }
 
-  .hint{
-    font-family:var(--mono); font-size:10px; letter-spacing:0.04em; color:var(--muted);
-    text-align:center; margin-top:12px; opacity:0.8; min-height:14px;
+  @media (max-width:560px){
+    #readout .r-name{ font-size:19px; }
+    .icon-btn{ width:37px; height:37px; }
+    .icon-row{ gap:6px; }
+    .slide-panel{ padding-left:18px; padding-right:18px; }
   }
-
-  @media (max-width: 560px){
-    #readout{ bottom:196px; }
-    .slide-panel{ width:100vw; }
-  }
-
   @media (prefers-reduced-motion: reduce){
-    #ambient{ animation:none; }
     #flash.burst{ animation:none; opacity:0; }
+    .slide-panel{ transition:none; }
   }
 </style>
 </head>
 <body>
 <div id="app">
-  <div id="ambient"></div>
   <video id="camFeed" autoplay playsinline muted></video>
-  <canvas id="viz"></canvas>
+  <canvas id="viz" aria-label="Generative visualisation of the active scents" role="img"></canvas>
   <div id="detectOverlay"></div>
   <div id="flash"></div>
-  <div id="vignette"></div>
-  <div id="grain"></div>
 
   <header id="topbar">
     <button class="brand" id="brandBtn" title="Back to intro" aria-label="Return to intro screen">OSMOS</button>
     <div class="icon-row">
       <button class="install-pill" id="installBtn" title="Install OSMOS">⇩ Install</button>
-      <button class="icon-btn" id="camBtn" title="Toggle camera backdrop" aria-label="Toggle camera">◎</button>
-      <button class="icon-btn" id="describeBtn" title="Plain-language scent descriptions" aria-label="Open scent descriptions">Aa</button>
-      <button class="icon-btn" id="sciBtn" title="How this works" aria-label="Open science mode">i</button>
+      <button class="icon-btn" id="libBtn" title="Library" aria-label="Open scent library">
+        <svg viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="3.25"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="3.25"/><path d="M16.75 13.5l3.25 6.5h-6.5z"/></svg>
+      </button>
+      <button class="icon-btn" id="camBtn" title="Camera backdrop + object recognition" aria-label="Toggle camera">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="2.5"/></svg>
+      </button>
+      <button class="icon-btn" id="soundBtn" title="Sound layer" aria-label="Toggle sound" aria-pressed="false">
+        <svg viewBox="0 0 24 24"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg>
+      </button>
+      <button class="icon-btn" id="describeBtn" title="What it actually smells like" aria-label="Open plain-language descriptions">Aa</button>
+      <button class="icon-btn" id="sciBtn" title="The science — how this works" aria-label="Open science panel">i</button>
     </div>
   </header>
 
-  <div id="camStatus"></div>
+  <div id="toast" role="status" aria-live="polite"></div>
 
-  <div id="readout" class="empty">
-    <span class="r-name" id="readoutName"></span>
-    <span class="r-blurb" id="readoutBlurb"></span>
-  </div>
 
-  <aside id="sciencePanel" class="slide-panel">
-    <button class="panel-close" data-panel="sciencePanel" aria-label="Close science mode">✕</button>
-    <div class="sci-label">Science mode</div>
-    <h2>This is not what it objectively looks like.</h2>
-    <p>OSMOS is an artistic interpretation, not a measurement. It's inspired by documented cases of <em style="color:var(--paper); font-style:normal;">olfactory‑visual synesthesia</em> — a rare condition where a smell involuntarily triggers a consistent visual experience: colour, shape, motion, even texture, with no learned or logical connection to the object itself. That's different from ordinary cross‑modal association, the common, culturally shared sense that lemons "feel" yellow or mint "feels" green.</p>
-    <p>Every scent below is broken into nine qualities researchers use to describe odour character. Those numbers drive the colour, motion and geometry you see — sweetness softens particles into orbs, bitterness and earthiness sharpen them into crystalline fragments, florals and smoke pull them into long drifting ribbons. No two synesthetes report identical mappings, so treat this as one possible signal, not the truth.</p>
-    <p>When the camera is on, OSMOS tries to recognise everyday objects it can see and draws a box around anything it can also assign a scent profile to. That's ordinary object recognition, not smell detection — the camera can tell a banana from a book, not what either actually smells like right now. Tap a box to load that object's profile.</p>
+  <!-- ============ SCIENCE ============ -->
+  <aside id="sciencePanel" class="slide-panel wide" aria-label="Science panel">
+    <button class="panel-close" data-close aria-label="Close">✕</button>
+    <div class="sci-label">The science</div>
+    <h2>This is not what a smell objectively looks like.</h2>
+    <p>Nothing does — smell has no inherent colour. What research <em>does</em> show is that most people, synesthete or not, match smells to colours, shapes and sounds in surprisingly consistent ways. OSMOS is built on those shared <em>crossmodal correspondences</em>, and every visual choice below is labelled by how strong its basis is:</p>
+    <p><span class="badge ev">Evidence</span> backed by published studies &nbsp; <span class="badge ph">Physical</span> follows from the chemistry &nbsp; <span class="badge art">Artistic</span> a design choice, not a finding</p>
+    <p>True olfactory–visual synesthesia is different: it's rare, and each synesthete's visions are personal — one person's chocolate is pink and stripy, another's is a hazy mist (Russell et al. 2015). OSMOS doesn't claim to show anyone's synesthesia; it shows the patterns most minds share.</p>
+
     <div class="divider"></div>
     <div class="sci-label">Active signal</div>
     <div id="scienceReadouts"></div>
+
+    <div class="divider"></div>
+    <div class="sci-label">How the mapping works</div>
+    <table class="maptable">
+      <thead><tr><th>You see</th><th>Driven by</th><th>Basis</th></tr></thead>
+      <tbody>
+        <tr><td>Colour (hue)</td><td>The colour people associate with the smell's source — lemon → yellow, mint → cyan-green.<span class="cite">Gilbert et al. 1996; Stevenson et al. 2012; Levitan et al. 2014</span></td><td><span class="badge ev">Evidence</span></td></tr>
+        <tr><td>Darkness</td><td>Stronger smells are matched to darker colours. Compressed on-screen so very dark scents stay visible.<span class="cite">Kemp &amp; Gilbert 1997</span></td><td><span class="badge ev">Evidence</span></td></tr>
+        <tr><td>Round ↔ angular</td><td>Pleasant, sweet smells read round; unpleasant, intense, sour or sharp smells read angular.<span class="cite">Hanson-Vaux et al. 2013; Deroy et al. 2013</span></td><td><span class="badge ev">Evidence</span></td></tr>
+        <tr><td>Pitch (sound)</td><td>Fruity and sweet smells sound higher; smoky, musky and woody smells lower.<span class="cite">Belkin et al. 1997; Crisinel &amp; Spence 2012</span></td><td><span class="badge ev">Evidence</span></td></tr>
+        <tr><td>Rise speed &amp; how long trails linger</td><td>Volatility: fleeting top notes (citrus, mint) rise fast and vanish; heavy base notes (musk, woods, vanilla) drift slowly and linger.</td><td><span class="badge ph">Physical</span></td></tr>
+        <tr><td>Fading over time</td><td>Olfactory adaptation — with continuous exposure your nose turns the volume down.<span class="cite">Dalton 2000</span></td><td><span class="badge ph">Physical</span></td></tr>
+        <tr><td>Blends</td><td>Up to 3 at once: people struggle to pick out more than about three smells in a mixture, and mixtures usually smell weaker than the sum of their parts.<span class="cite">Laing &amp; Francis 1989; Thomas-Danguin et al. 2014</span></td><td><span class="badge ev">Evidence</span></td></tr>
+        <tr><td>Density</td><td>More particles for stronger smells.</td><td><span class="badge art">Artistic</span></td></tr>
+        <tr><td>Turbulence</td><td>Cold, sour, acidic and chemical smells jitter — they <em>feel</em> sharp (many stimulate the trigeminal nerve), but the motion itself is our choice.</td><td><span class="badge art">Artistic</span></td></tr>
+        <tr><td>Timbre</td><td>Angular smells get brighter, buzzier tones — extends the shape result to sound by analogy.</td><td><span class="badge art">Artistic</span></td></tr>
+        <tr><td>Background field</td><td>Swirl complexity grows with how many qualities a smell has.</td><td><span class="badge art">Artistic</span></td></tr>
+      </tbody>
+    </table>
+
+    <div class="divider"></div>
+    <div class="sci-label">Where the numbers come from</div>
+    <p>Each scent is described with the 20 semantic descriptors used by Keller &amp; Vosshall (2016) — the same vocabulary behind the DREAM olfaction prediction challenge — plus <em>earthy</em> and <em>metallic</em> from the Dravnieks (1985) odour atlas, and ratings of intensity, pleasantness and volatility.</p>
+    <p>Be clear-eyed about what that means: those studies rated single molecules with real panels. OSMOS's values for everyday smells like "coffee" are <em>editorial estimates</em> for a typical encounter, informed by that work and by flavour chemistry — not measurements. Pleasantness especially varies by person and culture.</p>
+
+    <div class="divider"></div>
+    <div class="sci-label">What OSMOS can't tell you</div>
+    <p>It can't smell. The camera recognises objects (a cup, a book), not odours — and each object's scent is an assumption, shown as one. Intensity depends heavily on concentration and distance. Colour matches shift between cultures. And many people are blind to specific molecules (musks, β-ionone, rotundone), so the "same" smell genuinely differs from nose to nose.</p>
+
+    <div class="divider"></div>
+    <div class="sci-label">Model settings</div>
+    <div class="toggle-row">
+      <div><div class="tl">Model adaptation</div><div class="td">Active scents gradually fade, as they would in your nose. Remove a scent and give it a minute to recover. Hold on the stage to sniff.</div></div>
+      <button class="switch" id="adaptSwitch" role="switch" aria-checked="true" aria-label="Model adaptation"></button>
+    </div>
+    <div class="toggle-row">
+      <div><div class="tl">Sound layer</div><div class="td">A drone per scent: pitch from the odour–pitch research, timbre from shape.</div></div>
+      <button class="switch" id="soundSwitch" role="switch" aria-checked="false" aria-label="Sound layer"></button>
+    </div>
+
+    <div class="divider"></div>
+    <div class="sci-label">References</div>
+    <ul class="refs">
+      <li>Belkin, K., Martin, R., Kemp, S. E., &amp; Gilbert, A. N. (1997). Auditory pitch as a perceptual analogue to odor quality. <i>Psychological Science</i>, 8, 340–342.</li>
+      <li>Crisinel, A.-S., &amp; Spence, C. (2012). A fruity note: crossmodal associations between odors and musical notes. <i>Chemical Senses</i>, 37, 151–158.</li>
+      <li>Dalton, P. (2000). Psychophysical and behavioral characteristics of olfactory adaptation. <i>Chemical Senses</i>, 25, 487–492.</li>
+      <li>Deroy, O., Crisinel, A.-S., &amp; Spence, C. (2013). Crossmodal correspondences between odors and contingent features: odors, musical notes, and geometrical shapes. <i>Psychonomic Bulletin &amp; Review</i>, 20, 878–896.</li>
+      <li>Dravnieks, A. (1985). <i>Atlas of Odor Character Profiles</i>. ASTM DS 61.</li>
+      <li>Gilbert, A. N., Martin, R., &amp; Kemp, S. E. (1996). Cross-modal correspondence between vision and olfaction: the color of smells. <i>American Journal of Psychology</i>, 109, 335–351. <a href="https://pubmed.ncbi.nlm.nih.gov/8837406/" target="_blank" rel="noopener">PubMed</a></li>
+      <li>Hanson-Vaux, G., Crisinel, A.-S., &amp; Spence, C. (2013). Smelling shapes: crossmodal correspondences between odors and shapes. <i>Chemical Senses</i>, 38, 161–166. <a href="https://doi.org/10.1093/chemse/bjs087" target="_blank" rel="noopener">doi</a></li>
+      <li>Keller, A., &amp; Vosshall, L. B. (2016). Olfactory perception of chemically diverse molecules. <i>BMC Neuroscience</i>, 17, 55. <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC4977894/" target="_blank" rel="noopener">PMC</a></li>
+      <li>Kemp, S. E., &amp; Gilbert, A. N. (1997). Odor intensity and color lightness are correlated sensory dimensions. <i>American Journal of Psychology</i>, 110, 35–46. <a href="https://pubmed.ncbi.nlm.nih.gov/9100340/" target="_blank" rel="noopener">PubMed</a></li>
+      <li>Laing, D. G., &amp; Francis, G. W. (1989). The capacity of humans to identify odors in mixtures. <i>Physiology &amp; Behavior</i>, 46, 809–814.</li>
+      <li>Levitan, C. A., et al. (2014). Cross-cultural color-odor associations. <i>PLOS ONE</i>, 9(7), e101651. <a href="https://doi.org/10.1371/journal.pone.0101651" target="_blank" rel="noopener">doi</a></li>
+      <li>Russell, A., Stevenson, R. J., &amp; Rich, A. N. (2015). Chocolate smells pink and stripy: exploring olfactory-visual synesthesia. <i>Cognitive Neuroscience</i>, 6. <a href="https://doi.org/10.1080/17588928.2015.1035245" target="_blank" rel="noopener">doi</a></li>
+      <li>Stevenson, R. J., Rich, A., &amp; Russell, A. (2012). The nature and origin of cross-modal associations to odours. <i>Perception</i>, 41, 606–619. <a href="https://doi.org/10.1068/p7223" target="_blank" rel="noopener">doi</a></li>
+      <li>Thomas-Danguin, T., et al. (2014). The perception of odor objects in everyday life: a review on the processing of odor mixtures. <i>Frontiers in Psychology</i>, 5, 504. <a href="https://doi.org/10.3389/fpsyg.2014.00504" target="_blank" rel="noopener">doi</a></li>
+    </ul>
   </aside>
 
-  <aside id="describePanel" class="slide-panel" aria-live="polite">
-    <button class="panel-close" data-panel="describePanel" aria-label="Close describe mode">✕</button>
+  <!-- ============ DESCRIBE ============ -->
+  <aside id="describePanel" class="slide-panel" aria-label="Plain-language descriptions" aria-live="polite">
+    <button class="panel-close" data-close aria-label="Close">✕</button>
     <div class="sci-label">Describe mode</div>
     <h2>What it actually smells like.</h2>
-    <p>This is the literal counterpart to the visuals — plain-language descriptions, not artistic interpretation, written for anyone who can't smell the real thing, whether that's anosmia, a blocked nose, or curiosity. Available for every scent in the library. Use the speaker button to hear a description read aloud.</p>
+    <p>The literal counterpart to the visuals — plain-language descriptions and the molecules responsible, for anyone who can't smell the real thing, whether that's anosmia, a blocked nose, or curiosity.</p>
     <div class="divider"></div>
-    <div class="sci-label">Active scent</div>
     <div id="describeReadouts"></div>
   </aside>
 
-  <div id="sheet">
-    <div id="pillRow"></div>
-    <div class="search-row">
-      <input id="searchInput" type="text" placeholder="Type what you're smelling… coffee, rain, roses" autocomplete="off">
-      <button id="surpriseBtn">Surprise me</button>
+  <!-- ============ LIBRARY ============ -->
+  <aside id="libraryPanel" class="slide-panel wide" aria-label="Scent library">
+    <button class="panel-close" data-close aria-label="Close">✕</button>
+    <div class="sci-label">Library</div>
+    <h2 id="libTitle">Every scent, mapped.</h2>
+    <input id="libSearch" type="search" placeholder="Filter the library…" autocomplete="off" aria-label="Filter the library">
+    <div class="lib-tools">
+      <div class="seg" role="tablist" aria-label="View">
+        <button id="viewGrid" class="on" role="tab" aria-selected="true">Grid</button>
+        <button id="viewMap" role="tab" aria-selected="false">Odour map</button>
+      </div>
+      <select id="libSort" class="lib-select" aria-label="Sort">
+        <option value="name">A–Z</option>
+        <option value="P">Most pleasant</option>
+        <option value="I">Strongest</option>
+        <option value="V">Most fleeting</option>
+        <option value="Vr">Most lingering</option>
+      </select>
+      <select id="mapAxes" class="lib-select" aria-label="Map axes" hidden>
+        <option value="P-I">Pleasantness × Intensity</option>
+        <option value="P-V">Pleasantness × Volatility</option>
+        <option value="V-I">Volatility × Intensity</option>
+      </select>
     </div>
+    <div class="cat-tabs" id="libCats"></div>
+    <div class="lib-count" id="libCount"></div>
+    <div id="libBody"></div>
+  </aside>
+
+  <!-- ============ BOTTOM SHEET ============ -->
+  <div id="sheet">
+    <div id="readout" class="empty" aria-live="polite">
+      <span class="r-name" id="readoutName"></span>
+      <span class="r-blurb" id="readoutBlurb"></span>
+      <span class="r-meta" id="readoutMeta"></span>
+    </div>
+    <div id="pillRow"></div>
+    <div class="search-wrap">
+      <div id="suggest" role="listbox" aria-label="Suggestions"></div>
+      <div class="search-row">
+        <input id="searchInput" type="text" placeholder="Type what you're smelling… coffee, rain, eucalyptus" autocomplete="off" aria-label="Search scents" aria-autocomplete="list" aria-controls="suggest">
+        <button id="surpriseBtn" class="ghost-btn">Surprise me</button>
+      </div>
+    </div>
+    <div class="cat-tabs" id="sheetCats"></div>
     <div id="chipRow"></div>
     <div class="hint" id="hintText"></div>
   </div>
 
+  <!-- ============ LANDING ============ -->
   <div id="landing">
     <div class="eyebrow">A synesthetic instrument</div>
     <h1 class="wordmark">osmos</h1>
     <div class="tagline">the hidden visual language of smell</div>
-    <p class="lede">Some people never merely <em>remember</em> a colour when they smell coffee — they <em>see</em> one, involuntarily, every time. OSMOS borrows that rare wiring. Name any scent and watch a living signal bloom: not a picture of the thing, but of the feeling reported by minds that see smell.</p>
+    <p class="lede">Some people never merely <em>remember</em> a colour when they smell coffee — they <em>see</em> one. OSMOS turns scent into light and sound using what research shows about how all of us match smells to colour, shape and pitch — and tells you exactly where the evidence ends and the art begins.</p>
+    <div class="stats"><div><b id="statScents">131</b>scents</div><div><b>22</b>descriptors</div><div><b>14</b>references</div></div>
     <button class="enter-btn" id="enterBtn">Begin</button>
-    <div class="fine">No camera data leaves your device. If you enable the camera, optional object recognition also runs locally in your browser — nothing is uploaded anywhere.</div>
+    <div class="fine">No camera data leaves your device. Optional object recognition runs locally in your browser — nothing is uploaded anywhere.</div>
   </div>
 </div>
 
-<script>
-(function(){
-  "use strict";
-
-  /* ============================= DATA ============================= */
-  const SCENTS = [
-    { id:"strawberry", name:"Strawberry", emoji:"🍓", blurb:"bright red ribbons, pollen sparks",
-      words:["strawberry","berry","berries"],
-      literal:"Sweet and juicy with a slightly green, grassy edge from the leaves. Ripe strawberries smell like sugared berries with a faint tang — similar to strawberry candy, but softer and less artificial.",
-      profile:{sweetness:.9,brightness:.7,acidity:.5,earthiness:.1,freshness:.6,warmth:.3,bitterness:.05,floral:.4,smoke:0} },
-    { id:"coffee", name:"Coffee", emoji:"☕", blurb:"bronze smoke, slow amber embers",
-      words:["coffee","espresso","latte"],
-      literal:"Warm, roasted, and slightly bitter, with notes of toasted nuts, dark chocolate, and caramel. Fresh-ground coffee is sharper and more acidic; brewed coffee mellows into a rounder, smokier warmth.",
-      profile:{sweetness:.3,brightness:.2,acidity:.3,earthiness:.7,freshness:.1,warmth:.8,bitterness:.7,floral:.05,smoke:.6} },
-    { id:"pine", name:"Pine Forest", emoji:"🌲", blurb:"emerald ribbons, crystal needles",
-      words:["pine","forest","fir","conifer","woods"],
-      literal:"Sharp, resinous, and green — like fresh sap and crushed needles. A clean, slightly medicinal freshness, the same family as pine cleaning products but earthier and less synthetic outdoors.",
-      profile:{sweetness:.1,brightness:.4,acidity:.2,earthiness:.6,freshness:.9,warmth:.1,bitterness:.3,floral:.1,smoke:.1} },
-    { id:"petrichor", name:"Rain / Petrichor", emoji:"🌧️", blurb:"cool mist, silver sheeting",
-      words:["rain","petrichor","storm","wet ground"],
-      literal:"An earthy, mineral smell released when rain hits dry soil, often described as simply \"clean,\" with a faint metallic note. It comes from geosmin, the same compound that gives beets their earthy taste.",
-      profile:{sweetness:.05,brightness:.5,acidity:.1,earthiness:.8,freshness:.95,warmth:.05,bitterness:.1,floral:.05,smoke:.05} },
-    { id:"rose", name:"Rose", emoji:"🌹", blurb:"translucent petals, soft pink bloom",
-      words:["rose","roses"],
-      literal:"Sweet and floral with a slightly spicy, honeyed depth. Fresh roses smell lighter and greener than rose perfume, which is usually more concentrated and syrupy.",
-      profile:{sweetness:.6,brightness:.6,acidity:.1,earthiness:.1,freshness:.3,warmth:.2,bitterness:.05,floral:.95,smoke:0} },
-    { id:"chocolate", name:"Chocolate", emoji:"🍫", blurb:"dark velvet folds, slow warmth",
-      words:["chocolate","cocoa","cacao"],
-      literal:"Rich, slightly bitter, and roasted, with a warm sweetness underneath — similar to coffee but rounder and creamier, often with a faint fruity or vanilla note depending on the cacao.",
-      profile:{sweetness:.8,brightness:.2,acidity:.1,earthiness:.5,freshness:.05,warmth:.6,bitterness:.4,floral:.1,smoke:.2} },
-    { id:"ocean", name:"Ocean Breeze", emoji:"🌊", blurb:"blue transparent sheets, salt haze",
-      words:["ocean","sea","beach","salt air"],
-      literal:"Clean, salty, and slightly briny, often mixed with faint seaweed or mineral-wet notes. Sharper and more bracing than most florals — not sweet at all.",
-      profile:{sweetness:.1,brightness:.7,acidity:.2,earthiness:.1,freshness:.95,warmth:.1,bitterness:.05,floral:.05,smoke:0} },
-    { id:"bakery", name:"Fresh Bread", emoji:"🥖", blurb:"warm gold clouds, soft crust glow",
-      words:["bread","bakery","toast","croissant"],
-      literal:"Warm, yeasty, and slightly sweet, with a toasted, nutty edge from the crust — often compared to a mix of malt, popcorn, and warm butter.",
-      profile:{sweetness:.5,brightness:.5,acidity:.1,earthiness:.3,freshness:.4,warmth:.7,bitterness:.1,floral:.05,smoke:.2} },
-    { id:"citrus", name:"Citrus", emoji:"🍊", blurb:"sharp gold sparks, quick motion",
-      words:["citrus","orange","lemon","lime"],
-      literal:"Sharp, bright, and tangy rather than sweet. The peel smells oilier and more bitter than the juicy, sugary scent of the flesh inside.",
-      profile:{sweetness:.5,brightness:.9,acidity:.8,earthiness:.05,freshness:.8,warmth:.3,bitterness:.2,floral:.2,smoke:0} },
-    { id:"campfire", name:"Campfire", emoji:"🔥", blurb:"turbulent smoke, glowing fractures",
-      words:["campfire","bonfire","fire","woodsmoke"],
-      literal:"Dry, sharp, and slightly acrid, like burning wood and charcoal. Clings heavily to fabric and hair — distinct from cigarette smoke, which reads more chemical.",
-      profile:{sweetness:.1,brightness:.3,acidity:.05,earthiness:.6,freshness:.1,warmth:.8,bitterness:.5,floral:0,smoke:.95} },
-    { id:"lavender", name:"Lavender", emoji:"💜", blurb:"slow violet drift, gentle pulse",
-      words:["lavender"],
-      literal:"Soft, herbal, and slightly sweet, with a cooling, almost medicinal edge — similar to rosemary or mint, but rounder and less sharp.",
-      profile:{sweetness:.3,brightness:.5,acidity:.1,earthiness:.2,freshness:.5,warmth:.1,bitterness:.2,floral:.8,smoke:0} },
-    { id:"vanilla", name:"Vanilla", emoji:"🍦", blurb:"round cream orbs, low glow",
-      words:["vanilla"],
-      literal:"Warm, sweet, and creamy, with a faint boozy or woody undertone. Real vanilla is less sugary and more complex than synthetic \"vanilla scent,\" which tends to smell flatter.",
-      profile:{sweetness:.9,brightness:.5,acidity:.05,earthiness:.1,freshness:.1,warmth:.5,bitterness:.05,floral:.2,smoke:.1} },
-    { id:"leather", name:"Leather", emoji:"🧳", blurb:"dark angular fragments, low light",
-      words:["leather"],
-      literal:"Rich, smoky, and slightly sweet, with a musky depth. New leather smells sharper and more chemical from tanning; aged leather is softer and warmer.",
-      profile:{sweetness:.1,brightness:.1,acidity:.05,earthiness:.7,freshness:.05,warmth:.5,bitterness:.4,floral:0,smoke:.3} },
-    { id:"grass", name:"Cut Grass", emoji:"🌿", blurb:"quick green ribbons, upward rush",
-      words:["grass","cut grass","lawn"],
-      literal:"Sharp, green, and slightly bitter — a burst of \"green\" smell released when plant cells are damaged. It fades faster than most scents on this list.",
-      profile:{sweetness:.2,brightness:.6,acidity:.2,earthiness:.5,freshness:.9,warmth:.05,bitterness:.3,floral:.1,smoke:0} },
-    { id:"cinnamon", name:"Cinnamon", emoji:"🟤", blurb:"black crystalline spikes, warm core",
-      words:["cinnamon","spice"],
-      literal:"Warm, sweet, and spicy with a slight heat, almost peppery. Ground cinnamon is dustier and more intense than cinnamon sticks, which read woodier.",
-      profile:{sweetness:.5,brightness:.4,acidity:.1,earthiness:.5,freshness:.1,warmth:.8,bitterness:.3,floral:.05,smoke:.2} },
-    { id:"mint", name:"Peppermint", emoji:"🌱", blurb:"electric cyan flicker, cold clarity",
-      words:["mint","peppermint","menthol"],
-      literal:"Sharp, cool, and sweet, with an unmistakable cooling sensation that's as much a feeling as a smell — that's the menthol. Sharper and more medicinal than spearmint.",
-      profile:{sweetness:.3,brightness:.8,acidity:.1,earthiness:.05,freshness:.95,warmth:.05,bitterness:.2,floral:.05,smoke:0} },
-    { id:"jasmine", name:"Jasmine", emoji:"🤍", blurb:"woven silk petals, night bloom",
-      words:["jasmine"],
-      literal:"Intensely sweet and floral, with an unusual musky undertone that keeps it from being purely \"pretty\" — part of why it's prized in perfumery.",
-      profile:{sweetness:.5,brightness:.6,acidity:.1,earthiness:.1,freshness:.4,warmth:.2,bitterness:.05,floral:.9,smoke:0} },
-    { id:"oldbook", name:"Old Paper", emoji:"📖", blurb:"amber dust, slow settling fibres",
-      words:["old book","paper","library","dust"],
-      literal:"Sweet, woody, and slightly vanilla-like as old paper slowly breaks down — genuinely similar to vanilla and almond at a chemical level, layered over a dusty, musty base.",
-      profile:{sweetness:.2,brightness:.2,acidity:.1,earthiness:.6,freshness:.05,warmth:.4,bitterness:.3,floral:.05,smoke:.3} },
-    { id:"petrol", name:"Gasoline", emoji:"⛽", blurb:"sharp iridescent slick, jittering edge",
-      words:["gasoline","petrol","fuel"],
-      literal:"Sharp, sweet, and chemical, with a distinctive volatile quality that's noticeable even in tiny amounts. Many people find it oddly pleasant despite it being unsafe to breathe in.",
-      profile:{sweetness:.05,brightness:.3,acidity:.5,earthiness:.3,freshness:.1,warmth:.3,bitterness:.6,floral:0,smoke:.4} },
-    { id:"banana", name:"Banana", emoji:"🍌", blurb:"soft yellow orbs, creamy drift",
-      words:["banana"],
-      literal:"Sweet, creamy, and slightly musky. Banana candy often smells \"more banana\" than a real one — the flavouring compound is more concentrated than what ripe bananas naturally produce.",
-      profile:{sweetness:.7,brightness:.5,acidity:.15,earthiness:.2,freshness:.3,warmth:.2,bitterness:.05,floral:.1,smoke:0} },
-    { id:"apple", name:"Apple", emoji:"🍎", blurb:"crisp bright sparks, clean snap",
-      words:["apple"],
-      literal:"Crisp, sweet, and slightly tart, with a light, watery freshness — fainter than most fruit scents. A cut or bruised apple smells sharper as it starts to oxidize.",
-      profile:{sweetness:.6,brightness:.6,acidity:.5,earthiness:.1,freshness:.7,warmth:.1,bitterness:.1,floral:.15,smoke:0} },
-    { id:"greens", name:"Broccoli", emoji:"🥦", blurb:"angular green shards, mineral bite",
-      words:["broccoli","greens","vegetable","cabbage"],
-      literal:"Green and slightly bitter, with a mild sulphurous edge that gets stronger when cooked — the same family of compounds found in cabbage and mustard.",
-      profile:{sweetness:.1,brightness:.3,acidity:.1,earthiness:.55,freshness:.5,warmth:.05,bitterness:.55,floral:.05,smoke:0} },
-    { id:"carrot", name:"Carrot", emoji:"🥕", blurb:"warm orange filaments, earthy sweetness",
-      words:["carrot"],
-      literal:"Earthy and mildly sweet, with a green, woody top note. Milder and less pungent than most root vegetables.",
-      profile:{sweetness:.4,brightness:.5,acidity:.1,earthiness:.5,freshness:.4,warmth:.15,bitterness:.15,floral:.05,smoke:0} },
-    { id:"grilled", name:"Grilled / BBQ", emoji:"🌭", blurb:"charred smoke, savory haze",
-      words:["hot dog","grilled","bbq","barbecue","sausage"],
-      literal:"Smoky, savory, and slightly sweet from caramelizing fat and sugar — the specific smell of browning meat mixed with charcoal smoke.",
-      profile:{sweetness:.1,brightness:.2,acidity:.1,earthiness:.3,freshness:.05,warmth:.7,bitterness:.45,floral:0,smoke:.75} },
-    { id:"pizza", name:"Pizza", emoji:"🍕", blurb:"warm bready haze, tomato glow",
-      words:["pizza"],
-      literal:"Warm and savory: baked dough, melted cheese, and tomato, with a faint char from the crust. A blend rather than a single distinct note.",
-      profile:{sweetness:.3,brightness:.3,acidity:.3,earthiness:.3,freshness:.1,warmth:.7,bitterness:.2,floral:.05,smoke:.35} },
-    { id:"donut", name:"Donut", emoji:"🍩", blurb:"glazed sugar orbs, fried warmth",
-      words:["donut","doughnut"],
-      literal:"Sweet and rich, dominated by fried dough and sugar glaze — similar to funnel cake, warmer and oilier than a baked pastry.",
-      profile:{sweetness:.9,brightness:.5,acidity:.05,earthiness:.1,freshness:.05,warmth:.5,bitterness:.1,floral:.1,smoke:.15} },
-    { id:"wine", name:"Wine", emoji:"🍷", blurb:"deep fermented ribbons, dark bloom",
-      words:["wine"],
-      literal:"Fruity and slightly sour, with a warm, alcoholic sharpness and an earthy undertone from the barrel or grape skins. Reds skew darker and jammier; whites lighter and more floral.",
-      profile:{sweetness:.4,brightness:.3,acidity:.4,earthiness:.4,freshness:.15,warmth:.3,bitterness:.3,floral:.3,smoke:.05} },
-    { id:"houseplant", name:"Houseplant", emoji:"🪴", blurb:"green mineral drift, still air",
-      words:["plant","houseplant","fern"],
-      literal:"A mild, green, mineral smell — mostly damp soil and leaf, without much sweetness. Subtler than outdoor plants since indoor air moves less.",
-      profile:{sweetness:.1,brightness:.35,acidity:.1,earthiness:.5,freshness:.7,warmth:.05,bitterness:.25,floral:.15,smoke:0} },
-    { id:"oldtoy", name:"Old Toy", emoji:"🧸", blurb:"soft dust, faint vanilla cotton",
-      words:["teddy bear","toy","stuffed animal"],
-      literal:"A soft, dusty, slightly sweet smell — mostly aged cotton and foam, sometimes with a faint vanilla-like note similar to old books, from years of fabric slowly breaking down.",
-      profile:{sweetness:.3,brightness:.2,acidity:.05,earthiness:.35,freshness:.05,warmth:.35,bitterness:.1,floral:.1,smoke:.1} },
-    { id:"wetdog", name:"Wet Dog", emoji:"🐕", blurb:"damp musty haze, low animal warmth",
-      words:["dog","puppy","wet dog"],
-      literal:"Musty and damp, with a warm, slightly sour animal note — mostly bacteria breaking down oils on wet fur. Stronger and muskier the wetter, and dirtier, the dog.",
-      profile:{sweetness:0,brightness:.15,acidity:.1,earthiness:.6,freshness:.05,warmth:.3,bitterness:.35,floral:0,smoke:.1} },
-    { id:"stable", name:"Horse Stable", emoji:"🐴", blurb:"warm hay filaments, earthy leather",
-      words:["horse","stable","barn","hay","cow"],
-      literal:"Warm and earthy — a mix of hay, leather, and animal musk. Less sharp than most animal smells; most people find it more pleasant than expected, closer to a barn than manure specifically.",
-      profile:{sweetness:.1,brightness:.3,acidity:.1,earthiness:.7,freshness:.3,warmth:.3,bitterness:.2,floral:.05,smoke:0} },
-    { id:"wool", name:"Wool / Lanolin", emoji:"🐑", blurb:"oily amber wax, low animal warmth",
-      words:["sheep","wool","lanolin"],
-      literal:"Oily and slightly sweet, from lanolin — the natural wax that coats sheep's wool. Raw wool smells stronger and more animal than the washed wool used in clothing.",
-      profile:{sweetness:.1,brightness:.25,acidity:.05,earthiness:.4,freshness:.1,warmth:.3,bitterness:.2,floral:0,smoke:0} },
-    { id:"rubber", name:"Rubber / Road", emoji:"🛞", blurb:"warm black shards, tar haze",
-      words:["car","tire","rubber","road","bicycle","motorcycle","umbrella"],
-      literal:"Warm, sharp, and slightly sweet in a chemical way — heated rubber and tar. Much stronger from a hot tire or a rain-soaked road than from rubber sitting at room temperature.",
-      profile:{sweetness:0,brightness:.2,acidity:.1,earthiness:.1,freshness:.05,warmth:.4,bitterness:.5,floral:0,smoke:.3} },
-    { id:"electronics", name:"New Electronics", emoji:"💻", blurb:"pale static sparks, warm plastic haze",
-      words:["laptop","phone","electronics","gadget","tv"],
-      literal:"A faint, warm plastic smell with a hint of ozone, from heated components and new materials off-gassing. Fades within days as a device airs out.",
-      profile:{sweetness:.1,brightness:.5,acidity:.05,earthiness:.05,freshness:.2,warmth:.2,bitterness:.15,floral:0,smoke:.15} },
-    { id:"surfwax", name:"Surf Wax", emoji:"🏄", blurb:"sweet golden wax, coastal warmth",
-      words:["surfboard","surf wax"],
-      literal:"Sweet and waxy, usually scented with coconut or tropical fragrance on purpose — one of the most recognisable smells in surf culture, closer to sunscreen than anything oceanic.",
-      profile:{sweetness:.6,brightness:.5,acidity:.1,earthiness:.1,freshness:.3,warmth:.3,bitterness:.05,floral:.1,smoke:0} },
-    { id:"freshsnow", name:"Fresh Snow", emoji:"❄️", blurb:"pale cold mist, near-silent air",
-      words:["snow","ski","snowboard","winter"],
-      literal:"Very faint and clean — technically almost scentless, but intense cold changes how everything else smells, giving a sharp, mineral, almost metallic freshness.",
-      profile:{sweetness:0,brightness:.6,acidity:.05,earthiness:.05,freshness:.95,warmth:0,bitterness:.05,floral:0,smoke:0} },
-    { id:"metal", name:"Metal", emoji:"🔪", blurb:"cold silver flicker, sharp thin edge",
-      words:["knife","scissors","metal","fork","spoon"],
-      literal:"Cold and slightly sharp, often described as \"bloodlike\" or coppery — that's actually oils on your skin reacting with the metal, not the metal itself, which is nearly odourless.",
-      profile:{sweetness:0,brightness:.35,acidity:.3,earthiness:.1,freshness:.1,warmth:0,bitterness:.3,floral:0,smoke:0} }
-  ];
-  const SCENT_BY_ID = {};
-  SCENTS.forEach(s=>{ SCENT_BY_ID[s.id] = s; });
-  const COCO_TO_SCENT = {
-    "banana":"banana", "apple":"apple", "orange":"citrus", "broccoli":"greens",
-    "carrot":"carrot", "hot dog":"grilled", "pizza":"pizza", "donut":"donut",
-    "cake":"vanilla", "sandwich":"bakery", "wine glass":"wine", "cup":"coffee",
-    "potted plant":"houseplant", "book":"oldbook", "vase":"rose", "teddy bear":"oldtoy",
-    "dog":"wetdog", "horse":"stable", "sheep":"wool", "cow":"stable",
-    "car":"rubber", "motorcycle":"rubber", "bus":"rubber", "truck":"rubber",
-    "bicycle":"rubber", "skateboard":"rubber", "umbrella":"rubber",
-    "tv":"electronics", "laptop":"electronics", "mouse":"electronics",
-    "remote":"electronics", "keyboard":"electronics", "cell phone":"electronics",
-    "surfboard":"surfwax", "skis":"freshsnow", "snowboard":"freshsnow",
-    "scissors":"metal", "knife":"metal", "fork":"metal", "spoon":"metal",
-    "boat":"ocean", "toaster":"bakery", "toothbrush":"mint",
-    "backpack":"leather", "handbag":"leather", "suitcase":"leather",
-    "tie":"leather", "baseball glove":"leather"
-  };
-  const DETECT_CONFIDENCE = 0.55;
-  const MAX_BOXES = 4;
-  const DIMS = [
-    ["sweetness","SWEET"],["brightness","BRIGHT"],["acidity","ACID"],
-    ["earthiness","EARTH"],["freshness","FRESH"],["warmth","WARM"],
-    ["bitterness","BITTER"],["floral","FLORAL"],["smoke","SMOKE"]
-  ];
-  const ANCHORS = { warmth:25, freshness:190, floral:322, earthiness:42, bitterness:96, smoke:250, sweetness:346 };
-
-  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-  /* ============================= UTIL ============================= */
-  function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
-  function lerp(a,b,t){ return a+(b-a)*t; }
-  function mulberry32(seed){
-    return function(){
-      seed |= 0; seed = seed + 0x6D2B79F5 | 0;
-      let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
-      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-      return ((t ^ t >>> 14) >>> 0) / 4294967296;
-    };
-  }
-  function hashSeed(str){
-    let h = 2166136261;
-    for(let i=0;i<str.length;i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
-    return h >>> 0;
-  }
-  function fallbackProfile(text){
-    const rnd = mulberry32(hashSeed(text.toLowerCase().trim()));
-    const p = {};
-    DIMS.forEach(([k])=>{ p[k] = clamp(rnd()*0.55 + rnd()*0.25, 0, 1); });
-    const bump = (k,v)=>{ p[k] = clamp((p[k]||0)+v, 0, 1); };
-    const t = text.toLowerCase();
-    const rules = [
-      [/sweet|sugar|candy|honey/, ()=>bump("sweetness",.4)],
-      [/sour|acid|citrus|vinegar/, ()=>bump("acidity",.4)],
-      [/flower|floral|blossom|perfume/, ()=>bump("floral",.45)],
-      [/fresh|mint|cool|clean|ocean|rain/, ()=>bump("freshness",.4)],
-      [/earth|soil|wood|moss|mushroom/, ()=>bump("earthiness",.4)],
-      [/bitter|burnt|char|ash/, ()=>bump("bitterness",.4)],
-      [/warm|spice|cinnamon|fire|smoke/, ()=>{bump("warmth",.35); bump("smoke",.25);}],
-      [/bright|citrus|zest|sun/, ()=>bump("brightness",.35)],
-      [/dark|night|musk|leather/, ()=>bump("brightness",-.25)]
-    ];
-    rules.forEach(([re,fn])=>{ if(re.test(t)) fn(); });
-    DIMS.forEach(([k])=>{ p[k] = clamp(p[k],0,1); });
-    return p;
-  }
-  function findScent(query){
-    const q = query.toLowerCase().trim();
-    if(!q) return null;
-    let hit = SCENTS.find(s=> s.name.toLowerCase()===q || s.words.includes(q));
-    if(hit) return hit;
-    hit = SCENTS.find(s=> s.words.some(w=> q.includes(w) || w.includes(q)));
-    if(hit) return hit;
-    return {
-      id:"custom-"+hashSeed(q), name:query.trim(), emoji:"✦",
-      blurb:"experimental reading — no curated data", custom:true,
-      profile: fallbackProfile(q)
-    };
-  }
-  function paletteFor(p){
-    let sx=0, sy=0;
-    for(const k in ANCHORS){
-      const w = p[k] || 0;
-      const rad = ANCHORS[k] * Math.PI/180;
-      sx += Math.cos(rad)*w; sy += Math.sin(rad)*w;
-    }
-    let hue = Math.atan2(sy,sx) * 180/Math.PI; if(hue<0) hue+=360;
-    const spread = 26 + (p.acidity||0)*40 + (p.bitterness||0)*26;
-    const hue2 = (hue + spread) % 360;
-    const sat = clamp(52 + (p.brightness||0)*36, 28, 96);
-    const light = clamp(46 + (p.brightness||0)*14 - (p.earthiness||0)*12, 24, 70);
-    return { hue, hue2, sat, light };
-  }
-  function kindWeights(p){
-    const ribbon = (p.floral + p.smoke + p.freshness) / 3;
-    const orb = (p.sweetness + p.warmth + p.brightness) / 3;
-    const spike = (p.bitterness + p.earthiness + p.acidity) / 3;
-    const sum = ribbon + orb + spike || 1;
-    return { ribbon: ribbon/sum, orb: orb/sum, spike: spike/sum };
-  }
-  function flowAngle(x,y,t){
-    return Math.sin(x*0.0026 + t*0.6) + Math.cos(y*0.0031 - t*0.42) + Math.sin((x+y)*0.0016 + t*0.23) * 0.8;
-  }
-
-  /* ============================= CANVAS SETUP ============================= */
-  const canvas = document.getElementById("viz");
-  const ctx = canvas.getContext("2d");
-  let W=0, H=0, DPR=1, fieldScale=1;
-  function resize(){
-    DPR = Math.min(window.devicePixelRatio||1, 2);
-    W = window.innerWidth; H = window.innerHeight;
-    canvas.width = W*DPR; canvas.height = H*DPR;
-    canvas.style.width = W+"px"; canvas.style.height = H+"px";
-    ctx.setTransform(DPR,0,0,DPR,0,0);
-    fieldScale = clamp(Math.min(W,H)/430, 0.95, 2.6);
-  }
-  window.addEventListener("resize", resize);
-  resize();
-
-  /* ============================= EMITTER ============================= */
-  class Emitter{
-    constructor(scent){
-      this.scent = scent;
-      this.profile = scent.profile;
-      this.palette = paletteFor(this.profile);
-      this.weights = kindWeights(this.profile);
-      this.particles = [];
-      this.active = true;
-      this.age = 0;
-      this.spawnAccum = 0;
-      // multiple emission anchors spread across the viewport so the
-      // signal fills the whole scene rather than rising from one point
-      this.anchors = [
-        [0.5, 0.56],
-        [0.22 + Math.random()*0.16, 0.32 + Math.random()*0.22],
-        [0.62 + Math.random()*0.2, 0.42 + Math.random()*0.28],
-        [0.5 + (Math.random()-0.5)*0.5, 0.72 + Math.random()*0.16]
-      ];
-      this.blobs = Array.from({length:4}, (_,i)=>({
-        fx: 0.15 + Math.random()*0.7,
-        fy: 0.15 + Math.random()*0.65,
-        ampX: 0.08 + Math.random()*0.08,
-        ampY: 0.06 + Math.random()*0.08,
-        freq: 0.05 + Math.random()*0.05,
-        phase: Math.random()*Math.PI*2,
-        radiusFrac: 0.34 + Math.random()*0.26,
-        useSecondary: i%2===1
-      }));
-    }
-    rampMul(){ return clamp(this.age/1.3, 0, 1); }
-    spawnRatePerSec(){
-      const p = this.profile;
-      const base = 16 + (p.brightness + p.freshness + p.smoke) * 48;
-      return base * this.rampMul() * (reduceMotion?0.35:1);
-    }
-    spawnOne(w,h){
-      const p = this.profile, wt = this.weights;
-      const r = Math.random();
-      const kind = r < wt.orb ? "orb" : (r < wt.orb+wt.ribbon ? "ribbon" : "spike");
-      const anchor = this.anchors[Math.floor(Math.random()*this.anchors.length)];
-      const cx = anchor[0]*w, cy = anchor[1]*h;
-      const ang = Math.random()*Math.PI*2;
-      const field = Math.min(w,h);
-      const spread = field * (0.1 + p.freshness*0.16);
-      const x = cx + Math.cos(ang)*spread*Math.random();
-      const y = cy + Math.sin(ang)*spread*Math.random()*0.75;
-      const outward = 0.18 + p.brightness*0.3;
-      const upward = -(0.35 + (p.warmth+p.freshness)*0.55);
-      const jitter = p.acidity*1.6;
-      const vx = Math.cos(ang)*outward + (Math.random()-0.5)*jitter;
-      const vy = Math.sin(ang)*outward*0.6 + upward + (Math.random()-0.5)*0.4 + (kind==="spike"? p.earthiness*0.5 : 0);
-      const useSecondary = Math.random() < 0.42;
-      const hue = useSecondary ? this.palette.hue2 : this.palette.hue;
-      const life = kind==="ribbon" ? lerp(3.2,6.4,Math.random()) : lerp(2.2,4.6,Math.random());
-      const size = (kind==="orb" ? lerp(11,24,Math.random()) * (0.6+p.sweetness*1.4)
-                 : kind==="spike" ? lerp(9,18,Math.random()) * (0.6+p.bitterness*1.3)
-                 : lerp(2.6,5.4,Math.random()) * (0.7+p.floral*1.2)) * fieldScale;
-      this.particles.push({
-        x,y,vx,vy,kind,hue,
-        sat: this.palette.sat, light: this.palette.light,
-        size, life, maxLife: life, rot: Math.random()*Math.PI*2,
-        rotSpeed:(Math.random()-0.5)*(kind==="spike"?2.2:0.6),
-        hist: kind==="ribbon" ? [[x,y]] : null
-      });
-    }
-    update(dt, t, w, h){
-      this.age += dt;
-      if(this.active){
-        this.spawnAccum += this.spawnRatePerSec()*dt;
-        while(this.spawnAccum >= 1){ this.spawnOne(w,h); this.spawnAccum -= 1; }
-      }
-      const p = this.profile;
-      for(let i=this.particles.length-1;i>=0;i--){
-        const q = this.particles[i];
-        const fa = flowAngle(q.x, q.y, t);
-        q.vx += Math.cos(fa)*0.045 + (Math.random()-0.5)*p.acidity*0.12;
-        q.vy += Math.sin(fa)*0.03 - 0.012*(p.warmth) + 0.006*p.earthiness*(q.kind==="spike"?1:0.3);
-        q.vx *= 0.988; q.vy *= 0.988;
-        q.x += q.vx*dt*60*0.85; q.y += q.vy*dt*60*0.85;
-        q.rot += q.rotSpeed*dt;
-        q.life -= dt;
-        if(q.hist){ q.hist.push([q.x,q.y]); if(q.hist.length>20) q.hist.shift(); }
-        if(q.life<=0 || q.x<-160||q.x>w+160||q.y<-220||q.y>h+220) this.particles.splice(i,1);
-      }
-    }
-    drawBlobs(ctx, w, h, t){
-      const p = this.profile;
-      const breathe = 0.5 + 0.5*Math.sin(t*0.35);
-      const baseAlpha = (0.05 + p.brightness*0.05) * this.rampMul() * (0.6+breathe*0.4);
-      ctx.globalCompositeOperation = "lighter";
-      for(const b of this.blobs){
-        const bx = (b.fx + Math.sin(t*b.freq + b.phase)*b.ampX) * w;
-        const by = (b.fy + Math.cos(t*b.freq*0.8 + b.phase)*b.ampY) * h;
-        const rad = b.radiusFrac * Math.max(w,h) * fieldScale;
-        const hue = b.useSecondary ? this.palette.hue2 : this.palette.hue;
-        const g = ctx.createRadialGradient(bx,by,0,bx,by,rad);
-        g.addColorStop(0, `hsla(${hue},${this.palette.sat}%,${this.palette.light}%,${baseAlpha})`);
-        g.addColorStop(1, `hsla(${hue},${this.palette.sat}%,${this.palette.light}%,0)`);
-        ctx.fillStyle = g;
-        ctx.beginPath(); ctx.arc(bx,by,rad,0,Math.PI*2); ctx.fill();
-      }
-      ctx.globalCompositeOperation = "source-over";
-    }
-    draw(ctx){
-      ctx.globalCompositeOperation = "lighter";
-      for(const q of this.particles){
-        const lt = clamp(q.life/q.maxLife, 0, 1);
-        const alpha = Math.sin(lt*Math.PI) * 0.85;
-        if(alpha<=0.01) continue;
-        const col = `hsla(${q.hue},${q.sat}%,${q.light}%,${alpha})`;
-        if(q.kind==="orb"){
-          const g = ctx.createRadialGradient(q.x,q.y,0,q.x,q.y,q.size*2.4);
-          g.addColorStop(0, col);
-          g.addColorStop(1, `hsla(${q.hue},${q.sat}%,${q.light}%,0)`);
-          ctx.fillStyle = g;
-          ctx.beginPath(); ctx.arc(q.x,q.y,q.size*2.4,0,Math.PI*2); ctx.fill();
-        } else if(q.kind==="spike"){
-          ctx.save();
-          ctx.translate(q.x,q.y); ctx.rotate(q.rot);
-          ctx.fillStyle = col;
-          const s = q.size;
-          ctx.beginPath();
-          ctx.moveTo(0,-s*1.6); ctx.lineTo(s*0.8,s*0.6); ctx.lineTo(-s*0.8,s*0.6);
-          ctx.closePath(); ctx.fill();
-          ctx.restore();
-        } else {
-          if(!q.hist || q.hist.length<2) continue;
-          ctx.beginPath();
-          ctx.moveTo(q.hist[0][0], q.hist[0][1]);
-          for(let i=1;i<q.hist.length;i++) ctx.lineTo(q.hist[i][0], q.hist[i][1]);
-          ctx.strokeStyle = col;
-          ctx.lineWidth = q.size;
-          ctx.lineCap = "round"; ctx.lineJoin = "round";
-          ctx.stroke();
-        }
-      }
-      ctx.globalCompositeOperation = "source-over";
-    }
-    dead(){ return !this.active && this.particles.length===0; }
-  }
-
-  /* ============================= STATE / LOOP ============================= */
-  let emitters = [];
-  let activeScents = [];
-  let camOn = false;
-  let last = performance.now();
-  let cocoModel = null, modelLoading = false, modelFailed = false, modelLoadPromise = null;
-  let detectTimer = null;
-
-  function frame(now){
-    const dt = Math.min((now-last)/1000, 0.05);
-    last = now;
-    const t = now/1000;
-
-    if(camOn){
-      ctx.clearRect(0,0,W,H);
-    } else {
-      ctx.globalCompositeOperation = "source-over";
-      ctx.fillStyle = "rgba(9,8,15,0.12)";
-      ctx.fillRect(0,0,W,H);
-    }
-
-    for(const em of emitters){ em.drawBlobs(ctx, W, H, t); }
-    for(const em of emitters){ em.update(dt, t, W, H); em.draw(ctx); }
-    emitters = emitters.filter(em=> !em.dead());
-
-    requestAnimationFrame(frame);
-  }
-  requestAnimationFrame(frame);
-
-  /* ============================= UI WIRING ============================= */
-  const pillRow = document.getElementById("pillRow");
-  const chipRow = document.getElementById("chipRow");
-  const searchInput = document.getElementById("searchInput");
-  const hintText = document.getElementById("hintText");
-  const readout = document.getElementById("readout");
-  const readoutName = document.getElementById("readoutName");
-  const readoutBlurb = document.getElementById("readoutBlurb");
-  const scienceReadouts = document.getElementById("scienceReadouts");
-  const flashEl = document.getElementById("flash");
-  const sciencePanel = document.getElementById("sciencePanel");
-  const sciBtn = document.getElementById("sciBtn");
-  const describeReadouts = document.getElementById("describeReadouts");
-  const describePanel = document.getElementById("describePanel");
-  const describeBtn = document.getElementById("describeBtn");
-  const camBtn = document.getElementById("camBtn");
-  const camFeed = document.getElementById("camFeed");
-  const detectOverlay = document.getElementById("detectOverlay");
-  const camStatus = document.getElementById("camStatus");
-  const PILL_CLASSES = ["","b2","b3"];
-
-  function setCamStatus(msg, autoHideMs){
-    camStatus.textContent = msg;
-    camStatus.classList.toggle("show", !!msg);
-    if(msg && autoHideMs){
-      clearTimeout(setCamStatus._t);
-      setCamStatus._t = setTimeout(()=>{ camStatus.classList.remove("show"); }, autoHideMs);
-    }
-  }
-
-  SCENTS.forEach(s=>{
-    const chip = document.createElement("button");
-    chip.className = "chip";
-    chip.innerHTML = `<span class="em">${s.emoji}</span><span>${s.name}</span>`;
-    chip.addEventListener("click", ()=> toggleScent(s));
-    chip.dataset.id = s.id;
-    chipRow.appendChild(chip);
-  });
-
-  function triggerFlash(palette){
-    flashEl.style.setProperty("--flash-color", `hsla(${palette.hue},${palette.sat}%,${clamp(palette.light+12,0,80)}%,0.85)`);
-    flashEl.classList.remove("burst");
-    void flashEl.offsetWidth;
-    if(!reduceMotion) flashEl.classList.add("burst");
-  }
-
-  function renderPills(){
-    pillRow.innerHTML = "";
-    activeScents.forEach((s,i)=>{
-      const pill = document.createElement("button");
-      pill.className = "pill " + (PILL_CLASSES[i]||"");
-      pill.innerHTML = `${s.emoji} ${s.name} <span class="x">✕</span>`;
-      pill.addEventListener("click", ()=> toggleScent(s));
-      pillRow.appendChild(pill);
-    });
-  }
-
-  function renderChipStates(){
-    const ids = activeScents.map(s=>s.id);
-    const atCap = activeScents.length>=3;
-    chipRow.querySelectorAll(".chip").forEach(chip=>{
-      const isActive = ids.includes(chip.dataset.id);
-      chip.classList.toggle("active", isActive);
-      chip.classList.toggle("dim", atCap && !isActive);
-    });
-  }
-
-  function renderReadout(){
-    if(activeScents.length===0){
-      readout.classList.add("empty");
-      return;
-    }
-    readout.classList.remove("empty");
-    readoutName.textContent = activeScents.map(s=>s.name).join(" + ");
-    readoutBlurb.textContent = activeScents.length===1 ? activeScents[0].blurb : "blended signal — "+activeScents.map(s=>s.blurb).join("; ");
-  }
-
-  function renderScience(){
-    scienceReadouts.innerHTML = "";
-    if(activeScents.length===0){
-      scienceReadouts.innerHTML = `<p style="opacity:.6">Choose a scent to see its signal.</p>`;
-      return;
-    }
-    activeScents.forEach(s=>{
-      const block = document.createElement("div");
-      block.className = "readout-block";
-      let bars = "";
-      DIMS.forEach(([key,label])=>{
-        const v = clamp(s.profile[key]||0,0,1);
-        bars += `<div class="bar-row"><div class="bl">${label}</div><div class="bar-track"><div class="bar-fill" style="width:${(v*100).toFixed(0)}%"></div></div></div>`;
-      });
-      block.innerHTML = `<div class="rb-name">${s.emoji} ${s.name}${s.custom?" · experimental":""}</div>${bars}`;
-      scienceReadouts.appendChild(block);
-    });
-  }
-
-  function speakText(text, btn){
-    if(!("speechSynthesis" in window)) return;
-    const wasSpeaking = btn.classList.contains("speaking");
-    window.speechSynthesis.cancel();
-    document.querySelectorAll(".listen-btn.speaking").forEach(b=>b.classList.remove("speaking"));
-    if(wasSpeaking) return; // clicking an already-speaking button just stops it
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.rate = 0.98;
-    utter.onstart = ()=> btn.classList.add("speaking");
-    utter.onend = ()=> btn.classList.remove("speaking");
-    utter.onerror = ()=> btn.classList.remove("speaking");
-    window.speechSynthesis.speak(utter);
-  }
-
-  function renderDescribe(){
-    describeReadouts.innerHTML = "";
-    if(activeScents.length===0){
-      describeReadouts.innerHTML = `<p style="opacity:.6">Choose a scent to see its description.</p>`;
-      return;
-    }
-    activeScents.forEach(s=>{
-      const block = document.createElement("div");
-      block.className = "desc-block";
-      if(s.literal){
-        block.innerHTML = `
-          <div class="db-head">
-            <div class="db-name">${s.emoji} ${s.name}</div>
-            <button class="listen-btn" type="button" aria-label="Read description aloud">🔊 Listen</button>
-          </div>
-          <div class="db-text">${s.literal}</div>`;
-        const btn = block.querySelector(".listen-btn");
-        btn.addEventListener("click", ()=> speakText(`${s.name}. ${s.literal}`, btn));
-      } else {
-        block.innerHTML = `
-          <div class="db-head"><div class="db-name">${s.emoji} ${s.name}</div></div>
-          <div class="db-empty">No verified description yet for this typed entry — pick a scent from the library below for an accurate, plain-language description.</div>`;
-      }
-      describeReadouts.appendChild(block);
-    });
-  }
-
-  function toggleScent(s){
-    const idx = activeScents.findIndex(a=>a.id===s.id);
-    if(idx>=0){
-      activeScents.splice(idx,1);
-      const em = emitters.find(e=> e.scent.id===s.id && e.active);
-      if(em) em.active = false;
-      hintText.textContent = activeScents.length===0 ? "" : "";
-    } else {
-      if(activeScents.length>=3){
-        hintText.textContent = "Up to 3 scents can blend — remove one first.";
-        chipRow.querySelector(`.chip[data-id="${activeScents[0].id}"]`)?.classList.add("dim");
-        return;
-      }
-      activeScents.push(s);
-      const em = new Emitter(s);
-      emitters.push(em);
-      triggerFlash(em.palette);
-      hintText.textContent = activeScents.length>1 ? "Blending — signals merge where they overlap." : "";
-    }
-    if("speechSynthesis" in window) window.speechSynthesis.cancel();
-    renderPills(); renderChipStates(); renderReadout(); renderScience(); renderDescribe(); syncBoxActiveStates();
-  }
-
-  /* ============================= OBJECT DETECTION ============================= */
-  function loadScript(src){
-    return new Promise((resolve, reject)=>{
-      const el = document.createElement("script");
-      el.src = src; el.async = true;
-      el.onload = ()=> resolve();
-      el.onerror = ()=> reject(new Error("failed to load "+src));
-      document.head.appendChild(el);
-    });
-  }
-
-  function ensureModel(){
-    if(cocoModel) return Promise.resolve(cocoModel);
-    if(modelLoadPromise) return modelLoadPromise;
-    modelLoading = true;
-    setCamStatus("Loading detection model…");
-    modelLoadPromise = (async ()=>{
-      try{
-        if(typeof tf === "undefined"){
-          await loadScript("https://cdnjs.cloudflare.com/ajax/libs/tensorflow/4.22.0/tf.min.js");
-        }
-        if(typeof cocoSsd === "undefined"){
-          await loadScript("https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3");
-        }
-        cocoModel = await cocoSsd.load({ base:"lite_mobilenet_v2" });
-        modelFailed = false;
-        setCamStatus("Live detection on — tap what you see", 2600);
-        return cocoModel;
-      }catch(err){
-        modelFailed = true;
-        setCamStatus("Live detection unavailable in this preview — camera backdrop still works, and this activates automatically once the app is deployed on the web.", 6000);
-        throw err;
-      }finally{
-        modelLoading = false;
-      }
-    })();
-    return modelLoadPromise;
-  }
-
-  function startDetectionLoop(){
-    stopDetectionLoop();
-    detectTimer = setInterval(runDetection, 700);
-  }
-  function stopDetectionLoop(){
-    if(detectTimer){ clearInterval(detectTimer); detectTimer = null; }
-    clearBoxes();
-  }
-  function clearBoxes(){ detectOverlay.innerHTML = ""; }
-
-  async function runDetection(){
-    if(!cocoModel || !camOn || camFeed.readyState < 2) return;
-    try{
-      const preds = await cocoModel.detect(camFeed);
-      renderBoxes(preds);
-    }catch(err){ /* transient frame errors are fine to skip */ }
-  }
-
-  function computeVideoMapping(){
-    const vw = camFeed.videoWidth, vh = camFeed.videoHeight;
-    if(!vw || !vh) return null;
-    const dw = window.innerWidth, dh = window.innerHeight;
-    const scale = Math.max(dw/vw, dh/vh);
-    const ox = (vw*scale - dw)/2, oy = (vh*scale - dh)/2;
-    return { scale, ox, oy };
-  }
-
-  function renderBoxes(preds){
-    const map = computeVideoMapping();
-    if(!map) return;
-    const bestBySid = {};
-    preds.forEach(p=>{
-      const sid = COCO_TO_SCENT[p.class];
-      if(!sid || p.score < DETECT_CONFIDENCE) return;
-      if(!bestBySid[sid] || bestBySid[sid].score < p.score) bestBySid[sid] = p;
-    });
-    const top = Object.keys(bestBySid)
-      .map(sid=> ({ sid, pred: bestBySid[sid] }))
-      .sort((a,b)=> b.pred.score - a.pred.score)
-      .slice(0, MAX_BOXES);
-    const keepIds = new Set(top.map(t=>t.sid));
-
-    Array.from(detectOverlay.children).forEach(el=>{
-      if(!keepIds.has(el.dataset.sid)) el.remove();
-    });
-
-    top.forEach(({sid, pred})=>{
-      const scent = SCENT_BY_ID[sid];
-      if(!scent) return;
-      const [x,y,w,h] = pred.bbox;
-      const left = x*map.scale - map.ox;
-      const t = y*map.scale - map.oy;
-      const bw = w*map.scale, bh = h*map.scale;
-      let box = detectOverlay.querySelector(`[data-sid="${sid}"]`);
-      if(!box){
-        box = document.createElement("div");
-        box.className = "detect-box";
-        box.dataset.sid = sid;
-        box.innerHTML = `<div class="tag">${scent.emoji} ${scent.name}</div>`;
-        box.addEventListener("click", ()=> toggleScent(scent));
-        detectOverlay.appendChild(box);
-      }
-      box.style.left = Math.max(0,left)+"px";
-      box.style.top = Math.max(0,t)+"px";
-      box.style.width = bw+"px";
-      box.style.height = bh+"px";
-      box.classList.toggle("active", activeScents.some(a=>a.id===sid));
-    });
-  }
-
-  function syncBoxActiveStates(){
-    detectOverlay.querySelectorAll(".detect-box").forEach(el=>{
-      el.classList.toggle("active", activeScents.some(a=>a.id===el.dataset.sid));
-    });
-  }
-
-  searchInput.addEventListener("keydown", (e)=>{
-    if(e.key==="Enter"){
-      const q = searchInput.value;
-      if(!q.trim()) return;
-      const s = findScent(q);
-      toggleScent(s);
-      searchInput.value = "";
-    }
-  });
-
-  document.getElementById("surpriseBtn").addEventListener("click", ()=>{
-    const pool = SCENTS.filter(s=> !activeScents.find(a=>a.id===s.id));
-    if(pool.length===0) return;
-    toggleScent(pool[Math.floor(Math.random()*pool.length)]);
-  });
-
-  function closeAllPanels(){
-    sciencePanel.classList.remove("open");
-    sciBtn.classList.remove("active");
-    describePanel.classList.remove("open");
-    describeBtn.classList.remove("active");
-    if("speechSynthesis" in window) window.speechSynthesis.cancel();
-  }
-
-  sciBtn.addEventListener("click", ()=>{
-    const opening = !sciencePanel.classList.contains("open");
-    closeAllPanels();
-    if(opening){
-      sciencePanel.classList.add("open");
-      sciBtn.classList.add("active");
-    }
-  });
-
-  describeBtn.addEventListener("click", ()=>{
-    const opening = !describePanel.classList.contains("open");
-    closeAllPanels();
-    if(opening){
-      describePanel.classList.add("open");
-      describeBtn.classList.add("active");
-    }
-  });
-
-  document.querySelectorAll(".panel-close").forEach(btn=>{
-    btn.addEventListener("click", closeAllPanels);
-  });
-
-  document.getElementById("brandBtn").addEventListener("click", ()=>{
-    closeAllPanels();
-    document.getElementById("landing").classList.remove("hidden");
-  });
-
-  camBtn.addEventListener("click", async ()=>{
-    if(camOn){
-      const stream = camFeed.srcObject;
-      if(stream) stream.getTracks().forEach(tr=>tr.stop());
-      camFeed.srcObject = null;
-      camFeed.classList.remove("on");
-      camOn = false;
-      camBtn.classList.remove("active");
-      stopDetectionLoop();
-      setCamStatus("");
-      return;
-    }
-    try{
-      const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"environment" }, audio:false });
-      camFeed.srcObject = stream;
-      camFeed.classList.add("on");
-      camOn = true;
-      camBtn.classList.add("active");
-      if(!modelFailed){
-        ensureModel().then(()=>{ if(camOn) startDetectionLoop(); }).catch(()=>{});
-      }
-    }catch(err){
-      hintText.textContent = "Camera unavailable — staying in ambient view.";
-      setTimeout(()=>{ if(activeScents.length===0) hintText.textContent=""; }, 3200);
-    }
-  });
-
-  document.getElementById("enterBtn").addEventListener("click", ()=>{
-    document.getElementById("landing").classList.add("hidden");
-    if(activeScents.length===0){
-      toggleScent(SCENTS[0]);
-    }
-  });
-
-  renderScience();
-  renderDescribe();
-})();
-</script>
+<script src="scents.js"></script>
+<script src="app.js"></script>
 <script>
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
+      const hadController = !!navigator.serviceWorker.controller;
       navigator.serviceWorker.register("service-worker.js").catch(()=>{});
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (hadController && window.OSMOS_UI) window.OSMOS_UI.offerReload();
+      });
     });
   }
   let deferredInstallPrompt = null;
   const installBtn = document.getElementById("installBtn");
-  window.addEventListener("beforeinstallprompt", (e) => {
-    e.preventDefault();
-    deferredInstallPrompt = e;
-    installBtn.classList.add("show");
-  });
+  window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); deferredInstallPrompt = e; installBtn.classList.add("show"); });
   installBtn.addEventListener("click", async () => {
     if (!deferredInstallPrompt) return;
     installBtn.classList.remove("show");
@@ -1212,10 +488,7 @@
     try { await deferredInstallPrompt.userChoice; } catch(e) {}
     deferredInstallPrompt = null;
   });
-  window.addEventListener("appinstalled", () => {
-    installBtn.classList.remove("show");
-    deferredInstallPrompt = null;
-  });
+  window.addEventListener("appinstalled", () => { installBtn.classList.remove("show"); deferredInstallPrompt = null; });
 </script>
 </body>
 </html>

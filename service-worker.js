@@ -10,15 +10,17 @@
     These are all pinned/versioned CDN URLs, so this is safe forever; it
     just means the browser never re-downloads the multi-MB model again.
 
-  Bump CACHE_NAME (e.g. to 'osmos-cache-v2') whenever you redeploy a
-  change to index.html/manifest/icons, so old clients pick up the update
+  Bump CACHE_NAME (e.g. to 'osmos-cache-v6') whenever you redeploy a
+  change to index.html/app.js/scents.js/manifest/icons, so old clients pick up the update
   instead of quietly serving a stale copy from their cache.
 */
-const CACHE_NAME = 'osmos-cache-v4';
+const CACHE_NAME = 'osmos-cache-v5';
 
 const APP_SHELL = [
   './',
   './index.html',
+  './scents.js',
+  './app.js',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',
