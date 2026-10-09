@@ -45,7 +45,38 @@
     get(k, d){ try{ const v = localStorage.getItem("osmos."+k); return v === null ? d : JSON.parse(v); }catch(e){ return d; } },
     set(k, v){ try{ localStorage.setItem("osmos."+k, JSON.stringify(v)); }catch(e){} }
   };
-  const settings = { adapt: store.get("adapt", true), sound: false };
+  const settings = { adapt: store.get("adapt", true), sound: false, view: store.get("view", "consensus") === "mine" ? "mine" : "consensus" };
+
+  /* ===================== PERSONAL SYNAESTHESIA =======================
+     A synaesthete's own painting of a scent. It is the user's experience,
+     not data: stored only on this device (localStorage) or carried in a
+     share link, and always labelled "personal" in the UI.              */
+  const FORMS = ["orbs","shards","threads","mist","sheet","rain"];
+  const TEXTURES = ["smooth","grain","stripes","ripples","cells","fibres"];
+  const MOTIONS = ["drift","rise","fall","swirl","pulse","still"];
+  const TEX_ID = { smooth:0, grain:1, stripes:2, ripples:3, cells:4, fibres:5 };
+  const num = (v, d)=> (typeof v === "number" && isFinite(v)) ? v : (typeof v === "string" && v.trim() !== "" && isFinite(+v)) ? +v : d;
+  function sanitizeProfile(p){
+    if(!p || typeof p !== "object") return null;
+    const hex = /^#[0-9a-f]{6}$/i;
+    return {
+      c1: hex.test(p.c1) ? p.c1.toLowerCase() : "#cccccc",
+      c2: hex.test(p.c2) ? p.c2.toLowerCase() : "#ffffff",
+      form: FORMS.includes(p.form) ? p.form : "orbs",
+      tex: TEXTURES.includes(p.tex) ? p.tex : "smooth",
+      motion: MOTIONS.includes(p.motion) ? p.motion : "drift",
+      x: clamp(num(p.x,.5),0,1), y: clamp(num(p.y,.45),0,1),
+      size: clamp(num(p.size,.5),0,1), density: clamp(num(p.density,.5),0,1),
+      note: String(p.note || "").slice(0, 400),
+      n: String(p.n || "").slice(0, 40)
+    };
+  }
+  let mine = {};
+  (function(){ const raw = store.get("mine", {}); if(raw && typeof raw === "object") for(const k in raw){ const sp = sanitizeProfile(raw[k]); if(sp && /^[\w-]{1,60}$/.test(k)) mine[k] = sp; } })();
+  const shared = {};      // profiles opened from share links (this session only)
+  const saveMine = ()=> store.set("mine", mine);
+  const profileFor = (id)=> shared[id] || mine[id] || null;
+  const personalActive = (s)=> settings.view === "mine" && !!profileFor(s.id);
 
   /* =========================== THE MAPPING ===========================
      Everything visual/aural derives from the scent's data here, so the
@@ -127,8 +158,57 @@
     const v = { h, sat, l0, Lraw, rgb, rgbLight, rgbDeep, fieldRgb, ang, points, rise, life, decay, rate,
       jitter, sharp, size, complexity, pitchT, midi, hi, lo,
       colour: s.custom ? "neutral grey (no colour data)" : colourName(h, sat, Lraw) };
+    // ARTISTIC — surface texture, loosely motivated by odour–touch links
+    // (Demattè et al. 2006: pleasant odours make fabric feel softer)
+    const texScores = [["grain", Math.max(dv(s,"earthy"), dv(s,"burnt"), dv(s,"decayed"))],
+      ["fibres", Math.max(dv(s,"wood"), dv(s,"grass"))*.9], ["ripples", Math.max(dv(s,"cold"), dv(s,"fish"))*.9],
+      ["cells", dv(s,"chemical")*.8]].sort((a,b)=> b[1]-a[1]);
+    v.texName = (texScores[0][1] >= .45 && P < .85) ? texScores[0][0] : "smooth";
+    v.tex = TEX_ID[v.texName]; v.texAmt = .38; v.texScale = 1;
+    v.formId = 0; v.mist = 0; v.swirl = 0; v.pulse = 0; v.flowMul = 1; v.personal = false;
+    v.spread = .07 + .12*V; v.out = .25 + .7*V; v.dust = .3;
+    v.alphaNorm = alphaNorm(v);
     v.blurb = `${s.custom ? "neutral grey" : v.colour} · ${shapeWord(ang)} · ${motionWord(V)}`;
     VCACHE.set(s.id, v);
+    return v;
+  }
+
+  // keeps lingering, dense scents from blowing out to white: normalises
+  // expected on-screen energy (spawn rate × lifetime × area × trail length)
+  function alphaNorm(v){
+    const energy = v.rate * v.life * v.size * v.size / Math.max(.01, 1 - v.decay);
+    return clamp(Math.pow(2.9e6 / energy, .75), .18, 1.05);
+  }
+  const rgbToHex = (c)=> "#" + c.map(x=> Math.round(clamp(x,0,1)*255).toString(16).padStart(2,"0")).join("");
+  const FORM_ID = { orbs:0, shards:0, threads:1, mist:2, rain:3, sheet:4 };
+  function derivePersonal(s, p){
+    const base = derive(s);
+    const c1 = hexToRgb(p.c1), c2 = hexToRgb(p.c2);
+    const [h, sat, l] = rgbToHsl(...c1);
+    const lift = (c)=>{ const [hh,ss,ll] = rgbToHsl(...c); return hslToRgb(hh, ss, .22 + .78*ll); };
+    const rgb = lift(c1), rgbLight = lift(c2), rgbDeep = hslToRgb(h, sat, Math.max(.14, (.22+.78*l) - .18));
+    const m = p.motion, f = p.form;
+    const v = Object.assign({}, base, {
+      personal: true, profile: p, h, sat, Lraw: l, l0: l,
+      rgb, rgbLight, rgbDeep, fieldRgb: hslToRgb(h, sat, clamp(l, .12, .7)),
+      ang: f === "shards" ? .92 : f === "rain" ? .15 : .02,
+      points: f === "shards" ? 5 : 6,
+      formId: FORM_ID[f], mist: f === "mist" ? 1 : 0,
+      tex: TEX_ID[p.tex], texName: p.tex, texAmt: p.tex === "smooth" ? 0 : .9, texScale: 1.2,
+      rise: { drift:.45, rise:1.25, fall:-.9, swirl:.08, pulse:.2, still:.02 }[m],
+      life: m === "still" ? 9 : m === "fall" ? 4.5 : 5.5,
+      decay: (m === "still" || m === "pulse") ? .975 : .955,
+      rate: f === "sheet" ? 8 + 30*p.density : f === "mist" ? 10 + 45*p.density : 20 + 170*p.density,
+      jitter: m === "drift" ? .1 : .04,
+      size: f === "sheet" ? 3 : f === "mist" ? lerp(26, 70, p.size) : f === "threads" ? lerp(2.5, 7, p.size) : lerp(5, 30, p.size),
+      swirl: m === "swirl" ? 1 : 0, pulse: m === "pulse" ? 1 : 0,
+      flowMul: m === "still" ? .12 : m === "swirl" ? .35 : 1,
+      spread: .03 + .12*p.size, out: m === "still" ? .05 : .3, dust: f === "sheet" ? 1 : (f === "mist" || f === "threads") ? 0 : .2,
+      complexity: .5
+    });
+    v.alphaNorm = alphaNorm(v) * (f === "mist" ? 2.2 : f === "threads" ? 1.8 : 1);
+    v.colour = colourName(h, sat, l);
+    v.blurb = `your view · ${v.colour} ${p.form} · ${p.tex} · ${p.motion}`;
     return v;
   }
 
@@ -195,7 +275,8 @@
   const PART = { n: 0, max: 0, a: null };
   // layout: 0 x,1 y,2 vx,3 vy,4 life,5 maxLife,6 size,7 rot,8 rs,9 r,10 g,11 b,12 ang|pts packed? -> separate below
   // we keep two arrays for clarity: core (PF) + extra (ang, pts, rise, jit, alpha)
-  const EX = 5; PART.e = null;
+  // extras: 0 rise,1 jit,2 alpha,3 seed,4 V,5 swirl,6 cx,7 cy,8 pulse,9 form,10 tex,11 texAmt,12 texScale,13 mist,14 flowMul
+  const EX = 15; PART.e = null;
   function allocParticles(max){
     PART.max = max; PART.n = Math.min(PART.n, max);
     const a = new Float32Array(max*PF), e = new Float32Array(max*EX);
@@ -221,14 +302,25 @@
 
   class Emitter{
     constructor(scent, opts={}){
-      this.scent = scent; this.v = derive(scent);
+      this.scent = scent;
       this.active = true; this.demo = !!opts.demo;
       this.age = 0; this.exposure = opts.exposure || 0; this.fade = 0; this.spawnAcc = 0; this.eff = 0;
-      this.anchors = [0,1,2].map(()=>({
+      this.phase = Math.random()*6.283;
+      this.consAnchors = [0,1,2].map(()=>({
         bx: .14 + Math.random()*.72, by: .26 + Math.random()*.5,
         ax: .05 + Math.random()*.1, ay: .04 + Math.random()*.08,
         f: .04 + Math.random()*.05, ph: Math.random()*6.283
       }));
+      this.applyView();
+    }
+    applyView(){
+      const prof = (!this.demo && personalActive(this.scent)) ? profileFor(this.scent.id) : null;
+      this.personal = !!prof;
+      this.v = prof ? derivePersonal(this.scent, prof) : derive(this.scent);
+      this.anchors = prof ? [0,1,2].map(()=>({
+        bx: clamp(prof.x + (Math.random()-.5)*.08, .03, .97), by: clamp(prof.y + (Math.random()-.5)*.06, .03, .97),
+        ax: .012 + Math.random()*.02, ay: .01 + Math.random()*.02, f: .05 + Math.random()*.05, ph: Math.random()*6.283
+      })) : this.consAnchors;
     }
     anchorPos(i, t){ const a = this.anchors[i]; return [a.bx + Math.sin(t*a.f + a.ph)*a.ax, a.by + Math.cos(t*a.f*.8 + a.ph)*a.ay]; }
     adaptMul(){ return (settings.adapt && !this.demo) ? 1 - .55*(1 - Math.exp(-this.exposure/75)) : 1; }
@@ -244,14 +336,14 @@
     if(PART.n >= PART.max) return;
     const v = em.v, s = em.scent;
     const [ax, ay] = em.anchorPos((Math.random()*3)|0, t);
-    const spread = Math.min(W,H) * (.07 + .12*s.V);
+    const spread = Math.min(W,H) * v.spread;
     const r = spread * Math.sqrt(-2*Math.log(Math.random()+1e-6)) * .55;
     const th = Math.random()*6.2832;
     const x = ax*W + Math.cos(th)*r, y = ay*H + Math.sin(th)*r*.8;
     const fs = fieldScale;
-    const out = (.25 + .7*s.V) * fs;
+    const out = v.out * fs;
     const u = Math.random();
-    const c = u < .6 ? v.rgb : u < .82 ? v.rgbLight : v.rgbDeep;
+    const c = v.personal ? (u < .55 ? v.rgb : u < .9 ? v.rgbLight : v.rgbDeep) : (u < .6 ? v.rgb : u < .82 ? v.rgbLight : v.rgbDeep);
     const br = rand(.88, 1.12);
     const i = PART.n++;
     const o = i*PF, e = i*EX, A = PART.a, E = PART.e;
@@ -259,12 +351,14 @@
     A[o] = x; A[o+1] = y;
     A[o+2] = Math.cos(th)*out*.6; A[o+3] = Math.sin(th)*out*.4 - v.rise*.6*fs;
     A[o+4] = life; A[o+5] = life;
-    const dust = Math.random() < .3;
+    const dust = Math.random() < v.dust;
     A[o+6] = v.size * fs * (dust ? rand(.18, .32) : rand(.6, 1.3));
     A[o+7] = Math.random()*6.2832; A[o+8] = (Math.random()-.5)*(.4 + 2.2*v.ang);
     A[o+9] = c[0]*br; A[o+10] = c[1]*br; A[o+11] = c[2]*br;
     A[o+12] = clamp(v.ang + (Math.random()-.5)*.12, 0, 1); A[o+13] = v.points;
-    E[e] = v.rise; E[e+1] = v.jitter; E[e+2] = (.55 + .45*clamp(em.eff, 0, 1.2)) * (dust ? 1.6 : 1); E[e+3] = Math.random(); E[e+4] = s.V;
+    E[e] = v.rise; E[e+1] = v.jitter; E[e+2] = (.55 + .45*clamp(em.eff, 0, 1.2)) * (dust ? 1.6 : 1) * (v.mist ? .5 : 1) * v.alphaNorm; E[e+3] = Math.random(); E[e+4] = s.V;
+    E[e+5] = v.swirl; E[e+6] = ax*W; E[e+7] = ay*H; E[e+8] = v.pulse; E[e+9] = dust ? 0 : v.formId;
+    E[e+10] = dust ? 0 : v.tex; E[e+11] = v.texAmt; E[e+12] = v.texScale; E[e+13] = dust ? 0 : v.mist; E[e+14] = v.flowMul;
   }
 
   function stepParticles(dt, t){
@@ -277,7 +371,13 @@
       const x = A[o], y = A[o+1];
       const fa = flowAngle(x, y, t);
       let vx = A[o+2], vy = A[o+3];
-      vx += Math.cos(fa)*.035*f*fs; vy += Math.sin(fa)*.025*f*fs - E[e]*.012*f*fs;
+      const fm = E[e+14];
+      vx += Math.cos(fa)*.035*f*fs*fm; vy += Math.sin(fa)*.025*f*fs*fm - E[e]*.012*f*fs;
+      if(E[e+5] > 0){
+        const dx = x - E[e+6], dy = y - E[e+7], d = Math.sqrt(dx*dx + dy*dy) + 24;
+        vx += (-dy/d*.11*fs - dx/d*.025)*f; vy += (dx/d*.11*fs - dy/d*.025)*f;
+      }
+      if(fm < .5){ vx *= .97; vy *= .97; }
       const j = E[e+1];
       if(j > .06 && !reduceMotion){ vx += (Math.random()-.5)*j*.55*f; vy += (Math.random()-.5)*j*.55*f; }
       if(pd){
@@ -316,13 +416,29 @@
          + texture(uPrev, uv+vec2(0.,uTexel.y)).rgb + texture(uPrev, uv-vec2(0.,uTexel.y)).rgb)*.05;
       o = vec4(max(c*uDecay - uFloor, 0.) + texture(uAdd, vUv).rgb*uMix, 1.);
     }`;
+  const PATTERN = `
+    vec2 hsh2(vec2 p){ return fract(sin(vec2(dot(p, vec2(127.1,311.7)), dot(p, vec2(269.5,183.3))))*43758.5453); }
+    float pattern(float id, vec2 p, float sc, float sd){
+      vec2 q = p*sc + sd*13.7;
+      if(id < .5) return 1.;
+      if(id < 1.5) return .4 + 1.2*hsh(floor(q*6.));
+      if(id < 2.5) return .3 + .9*smoothstep(-.35, .35, sin(q.y*7.5 + sd*6.));
+      if(id < 3.5) return .3 + .9*smoothstep(-.35, .35, sin(length(p)*sc*10. - sd*20.));
+      if(id < 4.5){
+        vec2 g = floor(q*2.2), f = fract(q*2.2); float md = 1.;
+        for(int j=-1;j<=1;j++) for(int i=-1;i<=1;i++){ vec2 n = vec2(float(i), float(j)); md = min(md, length(n + hsh2(g+n) - f)); }
+        return .25 + 1.1*smoothstep(.04, .5, md);
+      }
+      return .35 + 1.*hsh(vec2(floor(q.x*9.), floor(q.y*1.3)));
+    }`;
   const VS_PART = GLSL_HEAD + `
     layout(location=0) in vec2 aQ;
     layout(location=1) in vec4 aA; // x y size rot
     layout(location=2) in vec4 aB; // r g b alpha
     layout(location=3) in vec4 aC; // ang points stretch seed
+    layout(location=4) in vec4 aD; // texture id, amount, scale, mist
     uniform vec2 uRes;
-    out vec2 vUv; out vec4 vCol; out vec3 vShape;
+    out vec2 vUv; out vec4 vCol; out vec3 vShape; out vec4 vTex; out float vSeed;
     void main(){
       float st = 1. + aC.z;
       vec2 q = vec2(aQ.x*st, aQ.y)*2.4;
@@ -330,11 +446,13 @@
       vec2 p = vec2(c*q.x - s*q.y, s*q.x + c*q.y)*aA.z + aA.xy;
       vec2 clip = p/uRes*2. - 1.; clip.y = -clip.y;
       gl_Position = vec4(clip, 0., 1.);
-      vUv = q; vCol = aB; vShape = aC.xyz;
+      vUv = q; vCol = aB; vShape = aC.xyz; vTex = aD; vSeed = aC.w;
     }`;
   const FS_PART = GLSL_HEAD + `
-    in vec2 vUv; in vec4 vCol; in vec3 vShape; out vec4 o;
+    in vec2 vUv; in vec4 vCol; in vec3 vShape; in vec4 vTex; in float vSeed; out vec4 o;
     uniform float uGain;
+    float hsh(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
+    ${PATTERN}
     float sdStar(vec2 p, float r, float n, float m){
       float an = 3.141593/n, en = 3.141593/m;
       vec2 acs = vec2(cos(an), sin(an)), ecs = vec2(cos(en), sin(en));
@@ -356,6 +474,8 @@
       float glow = exp(-max(d, 0.)*mix(2.2, 4.5, k));
       float hot = exp(-dot(p,p)*3.);
       float e = core*(.6 + .6*hot) + glow*mix(.32, .14, k);
+      if(vTex.w > .5){ e = exp(-dot(p,p)*1.2)*.5; }
+      else if(vTex.x > .5){ e *= mix(1., pattern(vTex.x, p, vTex.z, vSeed), vTex.y); }
       o = vec4(vCol.rgb*e*vCol.a*uGain, 0.);
     }`;
   const FS_FIELD = GLSL_HEAD + NOISE + `
@@ -375,6 +495,35 @@
         col += uC[i]*uW[i]*(f*.85 + .22)*(.25 + n*1.05);
       }
       o = vec4(col*uAmt, 1.);
+    }`;
+  const FS_SHEET = GLSL_HEAD + NOISE + PATTERN + `
+    in vec2 vUv; out vec4 o;
+    uniform int uN; uniform vec3 uC1[3], uC2[3]; uniform vec4 uA[3], uB[3]; uniform float uPh[3], uSp[3];
+    uniform float uTime, uAspect;
+    float surf(float x, float t, float amp){ return amp*(sin(x*1.7 + t)*.5 + sin(x*3.3 - t*1.27)*.28) + (fbm(vec2(x*1.1, t*.35)) - .5)*amp*1.3; }
+    void main(){
+      vec3 col = vec3(0.);
+      float x = vUv.x*uAspect;
+      for(int i=0;i<3;i++){
+        if(i >= uN) break;
+        float t = uTime*uSp[i] + uPh[i];
+        float cx = uA[i].x*uAspect, hw = uB[i].x*uAspect*.5;
+        float ends = smoothstep(cx-hw, cx-hw+.22, x)*(1. - smoothstep(cx+hw-.22, cx+hw, x));
+        if(ends <= 0.) continue;
+        float amp = uA[i].z;
+        float y0 = uA[i].y + surf(x, t, amp);
+        float slope = (surf(x+.01, t, amp) - surf(x-.01, t, amp))/.02;
+        float th = uB[i].y*(.55 + .45*sin(x*2.1 + t*.8));
+        float d = (vUv.y - y0)/th;
+        float inside = 1. - smoothstep(.72, 1., abs(d));
+        if(inside <= 0.) continue;
+        float fold = .5 + .5*cos(slope*3. + d*2.2 + sin(x*5. + t)*.6);
+        float sheen = pow(max(0., 1. - abs(d - .45*sin(x*3. + t*1.3))*1.6), 8.)*.7;
+        float pt = pattern(uB[i].z, vec2(x*2.2, d*.9 + t*.04), uB[i].w*1.4, float(i)*.37);
+        vec3 c = mix(uC1[i], uC2[i], clamp(.5 + .5*d*fold, 0., 1.));
+        col += (c*(.3 + .7*fold)*mix(1., pt, uB[i].z > .5 ? .75 : 0.) + uC2[i]*sheen)*inside*ends*uA[i].w;
+      }
+      o = vec4(col, 1.);
     }`;
   const FS_DOWN = GLSL_HEAD + `
     in vec2 vUv; out vec4 o; uniform sampler2D uSrc, uSrc2; uniform vec2 uTexel; uniform float uW1, uW2;
@@ -418,7 +567,7 @@
       if(!this.floatOK) this.floatOK = !!gl.getExtension("EXT_color_buffer_half_float");
       this.p = {
         feedback: this.prog(VS_FULL, FS_FEEDBACK), part: this.prog(VS_PART, FS_PART),
-        field: this.prog(VS_FULL, FS_FIELD), down: this.prog(VS_FULL, FS_DOWN),
+        field: this.prog(VS_FULL, FS_FIELD), down: this.prog(VS_FULL, FS_DOWN), sheet: this.prog(VS_FULL, FS_SHEET),
         blur: this.prog(VS_FULL, FS_BLUR), comp: this.prog(VS_FULL, FS_COMP)
       };
       this.locs = new Map();
@@ -430,9 +579,9 @@
       gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
       this.ib = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, this.ib);
       this.icap = 0; this.inst = null;
-      for(let k=0;k<3;k++){
+      for(let k=0;k<4;k++){
         gl.enableVertexAttribArray(1+k);
-        gl.vertexAttribPointer(1+k, 4, gl.FLOAT, false, 48, k*16);
+        gl.vertexAttribPointer(1+k, 4, gl.FLOAT, false, 64, k*16);
         gl.vertexAttribDivisor(1+k, 1);
       }
       gl.bindVertexArray(null);
@@ -525,26 +674,40 @@
       const n = PART.n;
       gl.bindFramebuffer(gl.FRAMEBUFFER, T.S.fb); gl.viewport(0,0,T.S.w,T.S.h);
       gl.clearColor(0,0,0,1); gl.clear(gl.COLOR_BUFFER_BIT);
+      if(st.sheetN > 0){
+        const p = P.sheet;
+        gl.useProgram(p);
+        gl.uniform1i(this.u(p, "uN"), st.sheetN);
+        gl.uniform3fv(this.u(p, "uC1"), st.sC1); gl.uniform3fv(this.u(p, "uC2"), st.sC2);
+        gl.uniform4fv(this.u(p, "uA"), st.sA); gl.uniform4fv(this.u(p, "uB"), st.sB);
+        gl.uniform1fv(this.u(p, "uPh"), st.sPh); gl.uniform1fv(this.u(p, "uSp"), st.sSp);
+        gl.uniform1f(this.u(p, "uTime"), st.t); gl.uniform1f(this.u(p, "uAspect"), this.w/this.h);
+        gl.bindVertexArray(this.emptyVao);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+      }
       if(n > 0){
         if(!this.inst || this.icap < n){
-          this.icap = Math.max(n, PART.max); this.inst = new Float32Array(this.icap*12);
+          this.icap = Math.max(n, PART.max); this.inst = new Float32Array(this.icap*16);
           gl.bindBuffer(gl.ARRAY_BUFFER, this.ib); gl.bufferData(gl.ARRAY_BUFFER, this.inst.byteLength, gl.DYNAMIC_DRAW);
         }
         const A = PART.a, E = PART.e, I = this.inst;
         for(let i=0;i<n;i++){
-          const o = i*PF, e = i*EX, k = i*12;
+          const o = i*PF, e = i*EX, k = i*16;
           const lt = A[o+4]/A[o+5];
           const env = Math.sin(lt*Math.PI);
           const vx = A[o+2], vy = A[o+3];
           const sp = Math.sqrt(vx*vx + vy*vy);
-          const stretch = Math.min(2.6, sp*.12*(.3 + E[e+4]));
-          I[k] = A[o]; I[k+1] = A[o+1]; I[k+2] = A[o+6]*(.7 + .3*env);
-          I[k+3] = stretch > .3 ? Math.atan2(vy, vx) : A[o+7];
+          const form = E[e+9];
+          const stretch = form === 1 ? 5 : form === 3 ? 2.6 : Math.min(2.6, sp*.12*(.3 + E[e+4]));
+          const pulse = E[e+8] > 0 ? 1 + .35*Math.sin(st.t*2.2 + E[e+3]*6.283) : 1;
+          I[k] = A[o]; I[k+1] = A[o+1]; I[k+2] = A[o+6]*(.7 + .3*env)*pulse;
+          I[k+3] = (stretch > .3 && sp > .01) ? Math.atan2(vy, vx) : A[o+7];
           I[k+4] = A[o+9]; I[k+5] = A[o+10]; I[k+6] = A[o+11]; I[k+7] = Math.pow(env, .9)*E[e+2];
           I[k+8] = A[o+12]; I[k+9] = A[o+13]; I[k+10] = stretch; I[k+11] = E[e+3];
+          I[k+12] = E[e+10]; I[k+13] = E[e+11]; I[k+14] = E[e+12]; I[k+15] = E[e+13];
         }
         gl.bindBuffer(gl.ARRAY_BUFFER, this.ib);
-        gl.bufferSubData(gl.ARRAY_BUFFER, 0, I, 0, n*12);
+        gl.bufferSubData(gl.ARRAY_BUFFER, 0, I, 0, n*16);
         gl.useProgram(P.part);
         gl.uniform2f(this.u(P.part, "uRes"), st.cssW, st.cssH);
         gl.uniform1f(this.u(P.part, "uGain"), .46 * st.gain);
@@ -751,7 +914,9 @@
   let ema = 1/60, slowFor = 0;
   let lastUi = 0, lastSound = 0;
   const st = { t:0, fieldC:new Float32Array(9), fieldW:new Float32Array(3), fieldP:new Float32Array(6),
-    warp:0, decay:.95, flow:.6, rise:.6, gain:1, cam:false, cssW:1, cssH:1 };
+    warp:0, decay:.95, flow:.6, rise:.6, gain:1, cam:false, cssW:1, cssH:1,
+    sheetN:0, sC1:new Float32Array(9), sC2:new Float32Array(9), sA:new Float32Array(12), sB:new Float32Array(12), sPh:new Float32Array(3), sSp:new Float32Array(3) };
+  const SHEET_SPEED = { drift:.3, rise:.42, fall:.42, swirl:.6, pulse:.3, still:.07 };
 
   function frame(now){
     const dt = Math.min((now - last)/1000, .05);
@@ -792,6 +957,16 @@
     st.warp = wsum > .01 ? warp/wsum : .3;
     st.flow = .5 + st.warp*.9;
     st.t = t; st.cam = camOn; st.cssW = W; st.cssH = H;
+    const sheets = emitters.filter(em=> em.v.formId === 4 && em.fade > 0).slice(0, 3);
+    st.sheetN = sheets.length;
+    sheets.forEach((em, i)=>{
+      const v = em.v, p = v.profile, w = clamp(em.eff, 0, 1.2);
+      st.sC1.set(v.rgb, i*3); st.sC2.set(v.rgbLight, i*3);
+      const yy = p.motion === "rise" ? p.y - .04*Math.sin(t*.2) : p.motion === "fall" ? p.y + .04*Math.sin(t*.2) : p.y;
+      st.sA.set([p.x, 1 - yy, .05 + .07*(p.motion === "still" ? .3 : 1), .62*w*(p.motion === "pulse" ? .75 + .25*Math.sin(t*2.2) : 1)], i*4);
+      st.sB.set([.5 + .45*p.size, .05 + .12*p.size, v.tex, 1], i*4);
+      st.sPh[i] = em.phase; st.sSp[i] = SHEET_SPEED[p.motion] || .3;
+    });
     st.gain = 1 + .25*sniff;
     renderer.render(st);
 
@@ -817,8 +992,9 @@
     }
     return d + "Z";
   }
-  function glyph(s, size=18){
-    const v = derive(s);
+  function viewOf(s){ return personalActive(s) ? derivePersonal(s, profileFor(s.id)) : derive(s); }
+  function glyph(s, size=18, useView=false){
+    const v = useView ? viewOf(s) : derive(s);
     return `<svg class="glyph" width="${size}" height="${size}" viewBox="-1.5 -1.5 3 3" aria-hidden="true">`
       + `<circle r="1.45" fill="${css(v.rgb,.16)}"/><path d="${glyphPath(v.ang, v.points)}" fill="${css(v.rgb)}"/></svg>`;
   }
@@ -826,8 +1002,8 @@
   /* ================================ UI =============================== */
   const pillRow = $("pillRow"), chipRow = $("chipRow"), searchInput = $("searchInput"), suggestEl = $("suggest");
   const hintText = $("hintText"), readout = $("readout"), toastEl = $("toast");
-  const panels = { science: $("sciencePanel"), describe: $("describePanel"), library: $("libraryPanel") };
-  const panelBtns = { science: $("sciBtn"), describe: $("describeBtn"), library: $("libBtn") };
+  const panels = { science: $("sciencePanel"), describe: $("describePanel"), library: $("libraryPanel"), mine: $("minePanel") };
+  const panelBtns = { science: $("sciBtn"), describe: $("describeBtn"), library: $("libBtn"), mine: $("paintBtn") };
   const flashEl = $("flash");
   let sheetCat = store.get("sheetCat", "all");
 
@@ -896,7 +1072,7 @@
       const p = document.createElement("button");
       p.className = "pill"; p.dataset.id = s.id;
       p.setAttribute("aria-label", `Remove ${s.name}`);
-      p.innerHTML = `${glyph(s, 18)}<span>${escHtml(s.name)}</span><span class="ad"></span><span class="x">✕</span>`;
+      p.innerHTML = `${glyph(s, 18, true)}<span>${escHtml(s.name)}</span>${personalActive(s) ? '<span class="me-dot" title="Your personal view">✎</span>' : ""}<span class="ad"></span><span class="x">✕</span>`;
       p.addEventListener("click", ()=> toggleScent(s));
       pillRow.appendChild(p);
     });
@@ -909,21 +1085,26 @@
       p.querySelector(".ad").textContent = (settings.adapt && pct >= 8) ? `−${pct}%` : "";
     });
     if(activeScents.length){
-      const meta = activeScents.length === 1 ? (()=>{
+      const anyMine = activeScents.some(personalActive);
+      const meta = (anyMine ? "PERSONAL VIEW — NOT DATA · " : "") + (activeScents.length === 1 ? (()=>{
         const s = activeScents[0], v = derive(s);
         return `INTENSITY ${s.I.toFixed(2)} · PLEASANT ${fmtSigned(s.P)} · ${noteWord(s.V).toUpperCase()} · ♪ ${noteName(v.midi)}`;
-      })() : `${activeScents.length}-PART BLEND · MIXTURE INTENSITY < SUM OF PARTS`;
+      })() : `${activeScents.length}-PART BLEND · MIXTURE INTENSITY < SUM OF PARTS`);
       const adapt = settings.adapt ? Math.max(...activeScents.map(adaptPct)) : 0;
       $("readoutMeta").textContent = meta + (adapt >= 10 ? ` · NOSE ADAPTED ${adapt}%` : "");
     }
   }
   function renderReadout(){
-    if(!activeScents.length){ readout.classList.add("empty"); return; }
+    if(!activeScents.length){ readout.classList.add("empty"); $("viewRow").hidden = true; return; }
     readout.classList.remove("empty");
     $("readoutName").textContent = activeScents.map(s=> s.name).join(" + ");
     $("readoutBlurb").textContent = activeScents.length === 1
-      ? derive(activeScents[0]).blurb + (activeScents[0].custom ? " · descriptor-only reading" : "")
-      : activeScents.map(s=> derive(s).colour).join(" / ") + " · blended signal";
+      ? viewOf(activeScents[0]).blurb + (activeScents[0].custom && !personalActive(activeScents[0]) ? " · descriptor-only reading" : "")
+      : activeScents.map(s=> viewOf(s).colour).join(" / ") + " · blended signal";
+    const note = activeScents.length === 1 && personalActive(activeScents[0]) ? profileFor(activeScents[0].id).note : "";
+    $("readoutNote").textContent = note ? `“${note}”` : "";
+    $("viewRow").hidden = false;
+    $("vCons").classList.toggle("on", settings.view === "consensus"); $("vMine").classList.toggle("on", settings.view === "mine");
     updateLive();
   }
 
@@ -971,7 +1152,9 @@
       const hiTxt = topDescriptors(s,3).map(x=> x[0]).join(", ");
       const darker = Math.round((v.l0 - v.Lraw)*100);
       const custom = s.custom ? `<p class="db-empty">Descriptor-only reading built from the words you typed (${escHtml(s.hits.join(", "))}). No association colour exists for it, so it renders in neutral grey; intensity and volatility are left at a neutral midpoint.</p>` : "";
+      const mineNote = personalActive(s) ? `<p class="me-note"><span class="badge me">Personal</span> The stage is showing <em>your</em> painting of this scent${shared[s.id] ? " (from a shared link)" : ""}. Everything below is the consensus mapping, for comparison.</p>` : "";
       return `<div class="sig">
+        ${mineNote}
         <div class="sig-head">${glyph(s, 36)}<div><div class="nm">${escHtml(s.name)}</div><div class="sub">${s.custom ? "TYPED ENTRY" : escHtml(CAT_NAME[s.cat]).toUpperCase()} · ${s.custom ? "KEYWORD ESTIMATE" : "EDITORIAL ESTIMATE"}</div></div></div>
         ${custom}
         ${radarSVG(s)}
@@ -1048,7 +1231,7 @@
       body.innerHTML = `<div class="lib-grid">` + list.map(s=>{
         const mini = (lab, val)=> `<span>${lab}</span><span class="mt"><i style="width:${(val*100).toFixed(0)}%"></i></span>`;
         return `<button class="lib-card${ids.includes(s.id)?" on":""}" data-id="${s.id}" aria-pressed="${ids.includes(s.id)}">
-          ${glyph(s, 30)}<span class="nm">${escHtml(s.name)}</span><span class="ct">${escHtml(CAT_NAME[s.cat])}</span>
+          ${glyph(s, 30)}<span class="nm">${escHtml(s.name)}${mine[s.id] ? ' <span class="me-dot" title="You have a personal view">✎</span>' : ""}</span><span class="ct">${escHtml(CAT_NAME[s.cat])}</span>
           <span class="mini">${mini("I", s.I)}${mini("P", (s.P+1)/2)}${mini("V", s.V)}</span></button>`;
       }).join("") + `</div>`;
       body.querySelectorAll(".lib-card").forEach(c=> c.addEventListener("click", ()=>{ toggleScent(SCENT_BY_ID[c.dataset.id]); }));
@@ -1102,12 +1285,13 @@
     if(!opening) return;
     panels[name].classList.add("open"); panelBtns[name].classList.add("active");
     if(name === "library") renderLibrary();
+    if(name === "mine") renderMineList();
   }
   function closeAllPanels(){
     Object.keys(panels).forEach(k=>{ panels[k].classList.remove("open"); panelBtns[k].classList.remove("active"); });
     if("speechSynthesis" in window) window.speechSynthesis.cancel();
   }
-  Object.keys(panels).forEach(k=> panelBtns[k].addEventListener("click", ()=> openPanel(k)));
+  ["science","describe","library"].forEach(k=> panelBtns[k].addEventListener("click", ()=> openPanel(k)));
   document.querySelectorAll("[data-close]").forEach(b=> b.addEventListener("click", closeAllPanels));
 
   // ----- flash
@@ -1146,9 +1330,157 @@
     if("speechSynthesis" in window) window.speechSynthesis.cancel();
     renderPills(); renderChipStates(); renderReadout(); renderScience(); renderDescribe(); syncBoxActiveStates();
     if(panels.library.classList.contains("open")) renderLibrary();
+    if(panels.mine.classList.contains("open")){ if(!activeScents.some(a=> a.id === edId)) edId = activeScents[0] ? activeScents[0].id : null; fillEditor(); }
   }
 
-  // ----- search + suggestions
+  /* ======================= MY SYNAESTHESIA (UI) ======================= */
+  const CUSTOM = {};                       // typed readings seen this session
+  const scentById = (id)=> SCENT_BY_ID[id] || CUSTOM[id] || activeScents.find(a=> a.id === id) || null;
+  let edId = null, savedTimer = null;
+  const FORM_LABEL = { orbs:"Orbs", shards:"Shards", threads:"Threads", mist:"Mist", sheet:"Sheet", rain:"Rain" };
+  const TEX_LABEL = { smooth:"Smooth", grain:"Grain", stripes:"Stripes", ripples:"Ripples", cells:"Cells", fibres:"Fibres" };
+  const MOTION_LABEL = { drift:"Drift", rise:"Rise", fall:"Fall", swirl:"Swirl", pulse:"Pulse", still:"Still" };
+  function defaultProfile(s){
+    const v = derive(s);
+    return sanitizeProfile({ c1: s.custom ? "#b9b4cc" : s.col, c2: rgbToHex(v.rgbLight), form: v.ang > .6 ? "shards" : "orbs",
+      tex: v.texName, motion: s.V > .66 ? "rise" : s.V < .25 ? "still" : "drift", x: .5, y: .42, size: .5, density: .5, note: "", n: s.name });
+  }
+  function setViewMode(view){
+    settings.view = view; store.set("view", view);
+    emitters.forEach(e=>{ if(!e.demo) e.applyView(); });
+    renderPills(); renderReadout(); renderScience();
+    if(panels.library.classList.contains("open")) renderLibrary();
+  }
+  function refreshPersonal(){
+    emitters.forEach(e=>{ if(!e.demo && e.scent.id === edId) e.applyView(); });
+    renderPills(); renderReadout(); renderScience();
+    $("edSaved").textContent = "Saved on this device";
+    clearTimeout(savedTimer); savedTimer = setTimeout(()=>{ $("edSaved").textContent = ""; }, 1600);
+  }
+  function editProfile(){
+    if(!edId) return null;
+    if(shared[edId] && !mine[edId]) mine[edId] = Object.assign({}, shared[edId]);
+    delete shared[edId];
+    if(!mine[edId]) mine[edId] = defaultProfile(scentById(edId));
+    return mine[edId];
+  }
+  function openEditor(id){
+    if(!activeScents.length){ toast("Add a scent first, then paint how <em>you</em> perceive it."); return; }
+    edId = id && activeScents.some(a=> a.id === id) ? id : (edId && activeScents.some(a=> a.id === edId) ? edId : activeScents[0].id);
+    if(!profileFor(edId)){ mine[edId] = defaultProfile(scentById(edId)); saveMine(); }
+    if(settings.view !== "mine") setViewMode("mine");
+    fillEditor();
+    if(!panels.mine.classList.contains("open")) openPanel("mine");
+  }
+  function optRow(el, opts, labels, current, field){
+    el.innerHTML = opts.map(o=> `<button type="button" class="ed-opt${o === current ? " on" : ""}" data-v="${o}" aria-pressed="${o === current}">${labels[o]}</button>`).join("");
+    el.querySelectorAll(".ed-opt").forEach(b=> b.addEventListener("click", ()=>{
+      const pr = editProfile(); if(!pr) return;
+      pr[field] = b.dataset.v; saveMine();
+      el.querySelectorAll(".ed-opt").forEach(x=>{ x.classList.toggle("on", x === b); x.setAttribute("aria-pressed", x === b); });
+      refreshPersonal();
+    }));
+  }
+  function fillEditor(){
+    const body = $("edBody");
+    if(!edId || !activeScents.length){ body.hidden = true; $("edEmpty").hidden = false; renderMineList(); return; }
+    body.hidden = false; $("edEmpty").hidden = true;
+    const pr = profileFor(edId) || defaultProfile(scentById(edId));
+    $("mineScents").innerHTML = activeScents.map(a=> `<button type="button" class="ed-scent${a.id === edId ? " on" : ""}" data-id="${a.id}">${glyph(a, 18, true)}<span>${escHtml(a.name)}</span></button>`).join("");
+    $("mineScents").querySelectorAll(".ed-scent").forEach(b=> b.addEventListener("click", ()=> openEditor(b.dataset.id)));
+    $("edC1").value = pr.c1; $("edC2").value = pr.c2;
+    optRow($("edForm"), FORMS, FORM_LABEL, pr.form, "form");
+    optRow($("edTex"), TEXTURES, TEX_LABEL, pr.tex, "tex");
+    optRow($("edMotion"), MOTIONS, MOTION_LABEL, pr.motion, "motion");
+    $("edSize").value = pr.size; $("edDensity").value = pr.density; $("edNote").value = pr.note;
+    placeDot(pr.x, pr.y);
+    $("edShared").hidden = !shared[edId];
+    renderMineList();
+  }
+  function placeDot(x, y){ const d = $("edDot"); d.style.left = (x*100) + "%"; d.style.top = (y*100) + "%"; }
+  ["edC1","edC2"].forEach((id, i)=> $(id).addEventListener("input", (e)=>{ const pr = editProfile(); if(!pr) return; pr[i ? "c2" : "c1"] = e.target.value.toLowerCase(); saveMine(); refreshPersonal(); }));
+  [["edSize","size"],["edDensity","density"]].forEach(([id, f])=> $(id).addEventListener("input", (e)=>{ const pr = editProfile(); if(!pr) return; pr[f] = clamp(+e.target.value, 0, 1); saveMine(); refreshPersonal(); }));
+  $("edNote").addEventListener("input", (e)=>{ const pr = editProfile(); if(!pr) return; pr.note = e.target.value.slice(0, 400); saveMine(); refreshPersonal(); });
+  $("edFromCons").addEventListener("click", ()=>{
+    const pr = editProfile(); if(!pr) return;
+    const d = defaultProfile(scentById(edId)); pr.c1 = d.c1; pr.c2 = d.c2; saveMine(); fillEditor(); refreshPersonal();
+  });
+  (function(){
+    const pad = $("edPad"); let dragging = false;
+    const setFrom = (e)=>{
+      const r = pad.getBoundingClientRect();
+      const x = clamp((e.clientX - r.left)/r.width, .02, .98), y = clamp((e.clientY - r.top)/r.height, .02, .98);
+      const pr = editProfile(); if(!pr) return; pr.x = x; pr.y = y; placeDot(x, y); saveMine(); refreshPersonal();
+    };
+    pad.addEventListener("pointerdown", (e)=>{ dragging = true; try{ pad.setPointerCapture(e.pointerId); }catch(_){} setFrom(e); });
+    pad.addEventListener("pointermove", (e)=>{ if(dragging) setFrom(e); });
+    const end = ()=>{ dragging = false; };
+    pad.addEventListener("pointerup", end); pad.addEventListener("pointercancel", end);
+  })();
+  $("edDelete").addEventListener("click", ()=>{
+    if(!edId) return;
+    delete mine[edId]; delete shared[edId]; saveMine();
+    emitters.forEach(e=>{ if(!e.demo) e.applyView(); });
+    renderPills(); renderReadout(); renderScience(); fillEditor();
+    toast("Personal view deleted — showing the consensus mapping for this scent.");
+  });
+  const b64url = (str)=> btoa(unescape(encodeURIComponent(str))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+  const unb64url = (str)=>{ let t = str.replace(/-/g,"+").replace(/_/g,"/"); while(t.length % 4) t += "="; return decodeURIComponent(escape(atob(t))); };
+  $("edShare").addEventListener("click", async ()=>{
+    const sc = scentById(edId), pr = profileFor(edId); if(!sc || !pr) return;
+    const payload = Object.assign({}, pr, { n: sc.name });
+    const url = location.origin + location.pathname + "#p=" + b64url(JSON.stringify({ id: sc.id, p: payload }));
+    if(navigator.share){ try{ await navigator.share({ title: `How I perceive ${sc.name} — OSMOS`, url }); return; }catch(e){ if(e && e.name === "AbortError") return; } }
+    try{ await navigator.clipboard.writeText(url); toast("Share link copied — anyone who opens it sees your painting, labelled as personal."); }
+    catch(e){ toast(`Copy this link:<br><span style="word-break:break-all;font-family:var(--mono);font-size:11px">${escHtml(url)}</span>`, { ms: 0, actions: [{ label: "Done", fn: ()=>{} }] }); }
+  });
+  function renderMineList(){
+    const ids = Object.keys(mine);
+    const el = $("mineList");
+    if(!ids.length){ el.innerHTML = `<p style="opacity:.6">Nothing saved yet.</p>`; return; }
+    el.innerHTML = ids.map(id=>{
+      const sc = scentById(id), name = sc ? sc.name : (mine[id].n || id);
+      return `<button type="button" class="ed-scent" data-id="${escHtml(id)}"><span class="swatch" style="background:${mine[id].c1}"></span><span>${escHtml(name)}</span><span class="c">${escHtml(mine[id].form)} · ${escHtml(mine[id].tex)}</span></button>`;
+    }).join("");
+    el.querySelectorAll(".ed-scent").forEach(b=> b.addEventListener("click", ()=>{
+      const id = b.dataset.id; let sc = scentById(id);
+      if(!sc){ sc = customFromName(mine[id].n || "Personal scent", id); }
+      if(!activeScents.some(a=> a.id === id)) toggleScent(sc);
+      if(activeScents.some(a=> a.id === id)) openEditor(id);
+    }));
+  }
+  function customFromName(name, id){
+    const r = descriptorReading(name) || { id: "custom-"+hashSeed(norm(name)), name, cat:"custom", emoji:"✦", col:"#a29eb4", I:.5, P:0, V:.5, d:{}, words:[], literal:"", mol:"", note:"", custom:true, hits:[] };
+    if(id) r.id = id;
+    CUSTOM[r.id] = r; return r;
+  }
+  $("vCons").addEventListener("click", ()=> setViewMode("consensus"));
+  $("vMine").addEventListener("click", ()=>{
+    if(!activeScents.some(a=> profileFor(a.id))) return openEditor();
+    setViewMode("mine");
+  });
+  $("paintBtn").addEventListener("click", ()=>{ if(panels.mine.classList.contains("open")) closeAllPanels(); else openEditor(); });
+
+  // shared links: #p=<base64url json>
+  function readShare(){
+    const m = location.hash.match(/^#p=([A-Za-z0-9_-]{4,6000})$/);
+    if(!m) return;
+    try{ history.replaceState(null, "", location.pathname + location.search); }catch(e){}
+    let d; try{ d = JSON.parse(unb64url(m[1])); }catch(e){ return; }
+    const prof = sanitizeProfile(d && d.p); if(!prof) return;
+    const id = String(d.id || "").slice(0, 60);
+    let sc = SCENT_BY_ID[id] || customFromName(prof.n || "Shared scent", /^custom-\d+$/.test(id) ? id : null);
+    const note = prof.note ? `<br><span style="opacity:.8">“${escHtml(prof.note)}”</span>` : "";
+    const view = (save)=>{
+      if(save){ mine[sc.id] = prof; saveMine(); } else shared[sc.id] = prof;
+      landing.classList.add("hidden"); document.body.classList.remove("landing"); stopDemo();
+      settings.view = "mine"; store.set("view", "mine");
+      if(!activeScents.some(a=> a.id === sc.id)){ if(activeScents.length >= MAX_ACTIVE) toggleScent(activeScents[0]); toggleScent(sc); }
+      else setViewMode("mine");
+    };
+    setTimeout(()=> toast(`Someone shared how <em>they</em> perceive <b>${escHtml(sc.name)}</b> — a personal painting, not data.${note}`,
+      { ms: 0, actions: [{ label: "View it", fn: ()=> view(false) }, { label: "Save to mine", fn: ()=> view(true) }, { label: "Not now", fn: ()=>{} }] }), 600);
+  }
   let sugItems = [], sugSel = -1;
   function renderSuggest(){
     const q = searchInput.value;
@@ -1167,6 +1499,7 @@
   }
   function pickSuggestion(i){
     const it = sugItems[i]; if(!it) return;
+    if(it.s.custom) CUSTOM[it.s.id] = it.s;
     if(!activeScents.some(a=> a.id === it.s.id)) toggleScent(it.s);
     searchInput.value = ""; suggestEl.classList.remove("show"); sugSel = -1;
   }
@@ -1343,10 +1676,12 @@
   renderChips(); renderPills(); renderReadout(); renderScience(); renderDescribe();
   document.body.classList.add("landing");
   startDemo();
+  readShare();
+  window.addEventListener("hashchange", readShare);
 
   window.OSMOS_UI = {
     offerReload(){ toast("OSMOS has been updated.", { ms: 0, actions: [{ label: "Reload", fn: ()=> location.reload() }] }); },
     // exposed for debugging / tests
-    _debug: { get emitters(){ return emitters; }, get particles(){ return PART.n; }, renderer: ()=> renderer.kind, toggleScent: (id)=> toggleScent(SCENT_BY_ID[id]), derive: (id)=> derive(SCENT_BY_ID[id]), search: searchScents }
+    _debug: { get emitters(){ return emitters; }, get particles(){ return PART.n; }, renderer: ()=> renderer.kind, toggleScent: (id)=> toggleScent(SCENT_BY_ID[id]), derive: (id)=> derive(SCENT_BY_ID[id]), search: searchScents, openEditor, setViewMode, get mine(){ return mine; } }
   };
 })();

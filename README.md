@@ -10,8 +10,8 @@ Live: https://osmos.delrogue.com (previously https://wrenthoms-bit.github.io/osm
 |---|---|
 | `index.html` | Markup + styles, service-worker registration, install prompt |
 | `app.js` | Engine: WebGL2 renderer (Canvas 2D fallback), particle system, mapping, sound, adaptation, UI |
-| `scents.js` | The scent library (131 entries), descriptor vocabulary, keyword lexicon, camera-object mapping |
-| `service-worker.js` | Offline cache. **Bump `CACHE_NAME` on every deploy** (currently `osmos-cache-v5`) |
+| `scents.js` | The scent library (143 entries, incl. 12 aroma molecules), descriptor vocabulary, keyword lexicon, camera-object mapping |
+| `service-worker.js` | Offline cache. **Bump `CACHE_NAME` on every deploy** (currently `osmos-cache-v6`) |
 | `manifest.json`, `icons/` | PWA metadata |
 | `CNAME` | GitHub Pages custom domain (`osmos.delrogue.com`) |
 | `CLAUDE.md`, `HANDOVER.md` | Notes for Claude Code |
@@ -27,9 +27,15 @@ Live: https://osmos.delrogue.com (previously https://wrenthoms-bit.github.io/osm
 | Rise speed, trail persistence | Volatility (top / heart / base note) | Physical |
 | Fading over time | Olfactory adaptation | Physical — Dalton 2000 |
 | Max 3 blended, weaker together | Mixture perception | Evidence — Laing & Francis 1989; Thomas-Danguin et al. 2014 |
+| Surface texture (grain, fibres, ripples, cells) | Earthy/burnt, woody/green, cold/watery, chemical | Artistic — loosely Demattè et al. 2006 |
 | Density, turbulence, timbre, field swirl | — | Artistic |
+| Everything, in **Mine** view | The user's own painting | Personal — never presented as data |
 
 Descriptors are the 20 from Keller & Vosshall (2016) plus *earthy* and *metallic* from the Dravnieks (1985) atlas. Per-scent values are **editorial estimates** for a typical everyday encounter, not panel measurements. Typed words that aren't in the library get a clearly labelled descriptor-only reading in neutral grey, or no reading at all — never random numbers.
+
+## Consensus vs Mine
+
+The default **Consensus** view shows correspondences most people share. **✎ Paint my synaesthesia** lets a synaesthete set their own colour (two), form (orbs, shards, threads, mist, sheet, rain), texture (smooth, grain, stripes, ripples, cells, fibres), motion (drift, rise, fall, swirl, pulse, still), position in the visual field, size, density and a note. Paintings are saved in `localStorage` (`osmos.mine`) and can be shared as a link (`#p=<base64url JSON>`); opening a link offers *View it* (session only) or *Save to mine*. Everything personal is labelled **Personal** in the UI.
 
 ## Adding a scent
 

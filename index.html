@@ -242,6 +242,48 @@
   .lib-map .lbl{ opacity:0; font-size:10px; fill:var(--paper); pointer-events:none; paint-order:stroke; stroke:#13111e; stroke-width:3px; }
   .map-note{ font-size:11.5px; color:var(--muted); line-height:1.55; margin-top:10px; }
 
+  /* ---------- personal / editor ---------- */
+  .badge.me{ color:#f5a3d0; }
+  .me-dot{ color:#f5a3d0; font-size:11px; }
+  .me-note{ font-size:12.5px !important; line-height:1.6 !important; color:var(--ink); background:rgba(245,163,208,.07); border:1px solid rgba(245,163,208,.25); border-radius:12px; padding:10px 12px; }
+  #readout .r-note{ display:block; font-family:var(--serif); font-style:italic; font-size:14px; color:#f5c9e2; margin-top:6px; line-height:1.45; }
+  #readout .r-note:empty{ display:none; }
+  .view-row{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:0 0 10px; }
+  .view-row[hidden]{ display:none; }
+  .view-row .seg{ background:rgba(20,18,32,.85); }
+  .view-row .seg button{ font-size:10.5px; padding:5px 12px; }
+  .paint-btn{ height:32px; font-size:11px; border-radius:999px; background:rgba(20,18,32,.85); }
+  .paint-btn:hover, .paint-btn.active{ color:#f5a3d0; border-color:rgba(245,163,208,.5); }
+  .ed-scents{ display:flex; flex-wrap:wrap; gap:6px; margin:4px 0 16px; }
+  #mineList{ display:flex; flex-direction:column; gap:6px; }
+  .ed-scent{ display:flex; align-items:center; gap:8px; background:var(--panel-2); border:1px solid var(--line); border-radius:999px; padding:5px 12px 5px 6px; cursor:pointer; font-size:13px; color:var(--paper); text-align:left; }
+  #mineList .ed-scent{ border-radius:12px; padding:9px 12px; }
+  .ed-scent .c{ margin-left:auto; font-family:var(--mono); font-size:9.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+  .ed-scent.on{ border-color:rgba(245,163,208,.6); background:rgba(245,163,208,.08); }
+  .ed-group{ margin-bottom:16px; }
+  .ed-label{ font-family:var(--mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+  .ed-label span{ text-transform:none; letter-spacing:.02em; opacity:.7; margin-left:6px; }
+  .ed-opts{ display:flex; flex-wrap:wrap; gap:6px; }
+  .ed-opt{ font-size:12.5px; background:transparent; border:1px solid var(--line-strong); border-radius:999px; padding:6px 12px; cursor:pointer; }
+  .ed-opt:hover{ border-color:rgba(255,255,255,.35); }
+  .ed-opt.on{ background:#f5c9e2; color:#1a1220; border-color:#f5c9e2; }
+  .ed-colours{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; font-size:12.5px; }
+  .ed-colours label{ display:flex; align-items:center; gap:8px; }
+  .ed-colours input[type=color]{ width:42px; height:30px; border:1px solid var(--line-strong); border-radius:8px; background:none; padding:2px; cursor:pointer; }
+  .ghost-sm{ font-family:var(--mono); font-size:10.5px; background:transparent; border:1px solid var(--line-strong); border-radius:999px; padding:5px 10px; cursor:pointer; }
+  .ghost-sm:hover{ color:var(--accent); border-color:rgba(143,247,212,.4); }
+  .ed-pad{ position:relative; height:150px; border-radius:14px; border:1px solid var(--line-strong); cursor:crosshair; touch-action:none;
+    background:radial-gradient(60% 70% at 50% 50%, rgba(255,255,255,.05), transparent 70%), repeating-linear-gradient(0deg, transparent 0 29px, rgba(255,255,255,.04) 29px 30px), repeating-linear-gradient(90deg, transparent 0 29px, rgba(255,255,255,.04) 29px 30px), var(--panel-2); }
+  #edDot{ position:absolute; width:20px; height:20px; margin:-10px 0 0 -10px; border-radius:50%; background:#f5c9e2; box-shadow:0 0 0 4px rgba(245,201,226,.2), 0 0 18px rgba(245,201,226,.6); pointer-events:none; }
+  .ed-sliders{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .ed-sliders label{ display:flex; flex-direction:column; gap:6px; font-family:var(--mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
+  .ed-sliders input{ accent-color:#f5c9e2; width:100%; }
+  #edNote{ width:100%; background:var(--panel-2); border:1px solid var(--line-strong); border-radius:12px; padding:10px 12px; color:var(--paper); font:inherit; font-size:14px; resize:vertical; }
+  .ed-actions{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .ed-actions .ghost-btn{ height:40px; border-radius:999px; }
+  .enter-btn.sm{ padding:11px 22px; font-size:13px; }
+  .ed-saved{ font-family:var(--mono); font-size:10px; color:var(--muted); }
+
   /* ---------- bottom sheet ---------- */
   #sheet{
     position:absolute; left:0; right:0; bottom:0; z-index:25;
@@ -289,6 +331,13 @@
     .icon-row{ gap:6px; }
     .slide-panel{ padding-left:18px; padding-right:18px; }
   }
+  @media (max-width:560px){
+    .slide-panel.editor{ top:auto; height:64vh; width:100vw; border-left:none; border-top:1px solid var(--line-strong);
+      border-radius:22px 22px 0 0; transform:translateY(100%); padding-top:22px; z-index:55; box-shadow:0 -20px 50px -20px rgba(0,0,0,.8); }
+    .slide-panel.editor.open{ transform:translateY(0); }
+    .slide-panel.editor .panel-close{ top:14px; }
+    .slide-panel.editor h2{ font-size:20px; }
+  }
   @media (prefers-reduced-motion: reduce){
     #flash.burst{ animation:none; opacity:0; }
     .slide-panel{ transition:none; }
@@ -329,8 +378,8 @@
     <div class="sci-label">The science</div>
     <h2>This is not what a smell objectively looks like.</h2>
     <p>Nothing does — smell has no inherent colour. What research <em>does</em> show is that most people, synesthete or not, match smells to colours, shapes and sounds in surprisingly consistent ways. OSMOS is built on those shared <em>crossmodal correspondences</em>, and every visual choice below is labelled by how strong its basis is:</p>
-    <p><span class="badge ev">Evidence</span> backed by published studies &nbsp; <span class="badge ph">Physical</span> follows from the chemistry &nbsp; <span class="badge art">Artistic</span> a design choice, not a finding</p>
-    <p>True olfactory–visual synesthesia is different: it's rare, and each synesthete's visions are personal — one person's chocolate is pink and stripy, another's is a hazy mist (Russell et al. 2015). OSMOS doesn't claim to show anyone's synesthesia; it shows the patterns most minds share.</p>
+    <p><span class="badge ev">Evidence</span> backed by published studies &nbsp; <span class="badge ph">Physical</span> follows from the chemistry &nbsp; <span class="badge art">Artistic</span> a design choice, not a finding &nbsp; <span class="badge me">Personal</span> your own experience</p>
+    <p>True olfactory–visual synesthesia is different: it's rare, and each synesthete's visions are personal — one person's chocolate is pink and stripy, another's is a hazy mist (Russell et al. 2015). OSMOS's default <em>Consensus</em> view doesn't claim to show anyone's synesthesia; it shows the patterns most minds share. Synaesthetes can paint their own — colour, texture, form, motion and place — with <em>✎ Paint my synaesthesia</em>, which is always labelled <span class="badge me">Personal</span>.</p>
 
     <div class="divider"></div>
     <div class="sci-label">Active signal</div>
@@ -352,6 +401,8 @@
         <tr><td>Turbulence</td><td>Cold, sour, acidic and chemical smells jitter — they <em>feel</em> sharp (many stimulate the trigeminal nerve), but the motion itself is our choice.</td><td><span class="badge art">Artistic</span></td></tr>
         <tr><td>Timbre</td><td>Angular smells get brighter, buzzier tones — extends the shape result to sound by analogy.</td><td><span class="badge art">Artistic</span></td></tr>
         <tr><td>Background field</td><td>Swirl complexity grows with how many qualities a smell has.</td><td><span class="badge art">Artistic</span></td></tr>
+        <tr><td>Surface texture</td><td>Earthy/burnt → grain, woody/green → fibres, cold/watery → ripples, chemical → cells; pleasant smells stay smooth. Loosely motivated by odours changing how soft things feel to the touch.<span class="cite">Demattè et al. 2006</span></td><td><span class="badge art">Artistic</span></td></tr>
+        <tr><td>Everything, in Mine view</td><td>Your own painting: colour, form (orbs, shards, threads, mist, sheets, rain), texture, motion and position.</td><td><span class="badge me">Personal</span></td></tr>
       </tbody>
     </table>
 
@@ -381,6 +432,7 @@
       <li>Belkin, K., Martin, R., Kemp, S. E., &amp; Gilbert, A. N. (1997). Auditory pitch as a perceptual analogue to odor quality. <i>Psychological Science</i>, 8, 340–342.</li>
       <li>Crisinel, A.-S., &amp; Spence, C. (2012). A fruity note: crossmodal associations between odors and musical notes. <i>Chemical Senses</i>, 37, 151–158.</li>
       <li>Dalton, P. (2000). Psychophysical and behavioral characteristics of olfactory adaptation. <i>Chemical Senses</i>, 25, 487–492.</li>
+      <li>Demattè, M. L., Sanabria, D., Sugarman, R., &amp; Spence, C. (2006). Cross-modal interactions between olfaction and touch. <i>Chemical Senses</i>, 31, 291–300.</li>
       <li>Deroy, O., Crisinel, A.-S., &amp; Spence, C. (2013). Crossmodal correspondences between odors and contingent features: odors, musical notes, and geometrical shapes. <i>Psychonomic Bulletin &amp; Review</i>, 20, 878–896.</li>
       <li>Dravnieks, A. (1985). <i>Atlas of Odor Character Profiles</i>. ASTM DS 61.</li>
       <li>Gilbert, A. N., Martin, R., &amp; Kemp, S. E. (1996). Cross-modal correspondence between vision and olfaction: the color of smells. <i>American Journal of Psychology</i>, 109, 335–351. <a href="https://pubmed.ncbi.nlm.nih.gov/8837406/" target="_blank" rel="noopener">PubMed</a></li>
@@ -434,12 +486,61 @@
     <div id="libBody"></div>
   </aside>
 
+  <!-- ============ MY SYNAESTHESIA ============ -->
+  <aside id="minePanel" class="slide-panel editor" aria-label="My synaesthesia">
+    <button class="panel-close" data-close aria-label="Close">✕</button>
+    <div class="sci-label">My synaesthesia <span class="badge me">Personal</span></div>
+    <h2>Paint what you perceive.</h2>
+    <p>Synaesthetic experiences are personal — texture, form, motion and place, not just colour. Set yours and watch the stage change live. This is <em>your experience, not data</em>: it's saved only on this device unless you share it.</p>
+    <p id="edEmpty" class="db-empty" hidden>Add a scent from the library first, then paint how you perceive it.</p>
+    <div id="edBody">
+      <p id="edShared" class="me-note" hidden>You're viewing someone else's shared painting. Any change you make saves a copy as yours.</p>
+      <div class="ed-scents" id="mineScents"></div>
+      <div class="ed-group"><div class="ed-label">Colour</div>
+        <div class="ed-colours">
+          <label>Main <input type="color" id="edC1"></label>
+          <label>Second <input type="color" id="edC2"></label>
+          <button type="button" class="ghost-sm" id="edFromCons">Reset to consensus</button>
+        </div>
+      </div>
+      <div class="ed-group"><div class="ed-label">Form</div><div class="ed-opts" id="edForm"></div></div>
+      <div class="ed-group"><div class="ed-label">Texture</div><div class="ed-opts" id="edTex"></div></div>
+      <div class="ed-group"><div class="ed-label">Motion</div><div class="ed-opts" id="edMotion"></div></div>
+      <div class="ed-group"><div class="ed-label">Where it sits <span>drag the dot — your visual field</span></div>
+        <div id="edPad" class="ed-pad" role="application" aria-label="Position in your visual field"><span id="edDot"></span></div>
+      </div>
+      <div class="ed-group ed-sliders">
+        <label>Size <input type="range" id="edSize" min="0" max="1" step="0.01"></label>
+        <label>Density <input type="range" id="edDensity" min="0" max="1" step="0.01"></label>
+      </div>
+      <div class="ed-group"><div class="ed-label">In your words</div>
+        <textarea id="edNote" maxlength="400" rows="3" placeholder="e.g. a billowing, sunscreened sheet suspended mid-sentence…"></textarea>
+      </div>
+      <div class="ed-actions">
+        <button type="button" class="enter-btn sm" id="edShare">Share link</button>
+        <button type="button" class="ghost-btn" id="edDelete">Delete mine</button>
+        <span id="edSaved" class="ed-saved" aria-live="polite"></span>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="sci-label">Saved on this device</div>
+    <div id="mineList"></div>
+  </aside>
+
   <!-- ============ BOTTOM SHEET ============ -->
   <div id="sheet">
     <div id="readout" class="empty" aria-live="polite">
       <span class="r-name" id="readoutName"></span>
       <span class="r-blurb" id="readoutBlurb"></span>
       <span class="r-meta" id="readoutMeta"></span>
+      <span class="r-note" id="readoutNote"></span>
+    </div>
+    <div id="viewRow" class="view-row" hidden>
+      <div class="seg" role="group" aria-label="View">
+        <button id="vCons" class="on" title="The patterns most people share, from published research">Consensus</button>
+        <button id="vMine" title="Your own painting of each scent">Mine</button>
+      </div>
+      <button id="paintBtn" class="ghost-btn paint-btn">✎ Paint my synaesthesia</button>
     </div>
     <div id="pillRow"></div>
     <div class="search-wrap">
@@ -460,7 +561,7 @@
     <h1 class="wordmark">osmos</h1>
     <div class="tagline">the hidden visual language of smell</div>
     <p class="lede">Some people never merely <em>remember</em> a colour when they smell coffee — they <em>see</em> one. OSMOS turns scent into light and sound using what research shows about how all of us match smells to colour, shape and pitch — and tells you exactly where the evidence ends and the art begins.</p>
-    <div class="stats"><div><b id="statScents">131</b>scents</div><div><b>22</b>descriptors</div><div><b>14</b>references</div></div>
+    <div class="stats"><div><b id="statScents">143</b>scents</div><div><b>22</b>descriptors</div><div><b>15</b>references</div></div>
     <button class="enter-btn" id="enterBtn">Begin</button>
     <div class="fine">No camera data leaves your device. Optional object recognition runs locally in your browser — nothing is uploaded anywhere.</div>
   </div>
