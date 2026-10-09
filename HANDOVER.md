@@ -13,7 +13,22 @@ OSMOS v2 was built in a Claude chat session and delivered as a zip. Compared wit
 - split the code into `index.html` + `app.js` + `scents.js`
 - bumped `CACHE_NAME` to `osmos-cache-v5`
 
-It was tested in headless Chromium with software WebGL. It has **not** been tested on a real phone or GPU, and camera object detection was not exercised.
+v2.1 adds the personal mode and molecules described below. It was tested in headless Chromium with software WebGL. It has **not** been tested on a real phone or GPU, and camera object detection was not exercised.
+
+## Update — v2.1 (after a Basenotes synaesthete's feedback)
+- **✎ Paint my synaesthesia** (personal mode). A synaesthete sets two colours, form (orbs / shards / threads / mist / **sheet** / rain), texture (smooth / grain / stripes / ripples / cells / fibres), motion (drift / rise / fall / swirl / pulse / still), where it sits in their visual field, size, density and a note. It's saved on the device and shareable as a `#p=` link. A Consensus/Mine toggle sits above the scent pills. It's always labelled **Personal**.
+- **Renderer:** per-particle textures, thread/mist/rain forms, a billowing "sheet" shader layer, and brightness normalisation (`alphaNorm`) so heavy base notes like vanilla no longer blow out to white.
+- **Consensus textures** are labelled Artistic, loosely based on Demattè et al. 2006, which is added to the references (now 15).
+- **New "Aroma molecules" category** (12 entries: ethyl vanillin, vanillin, Iso E Super, Ambroxan, Hedione, Galaxolide, Calone, aldehydes, linalool, coumarin, indole, dihydromyrcenol). Total is now 143.
+- **Cache** bumped to `osmos-cache-v6`.
+
+If you already synced v2 into the repo, overwrite with these files. All changes are in `index.html`, `app.js`, `scents.js`, `service-worker.js`, `README.md`, `CLAUDE.md` and `HANDOVER.md`.
+
+Extra real-device checks for v2.1:
+- the editor bottom sheet on phones (64vh)
+- the colour picker on iOS
+- the share link via the native share sheet
+- frame rate with 3 sheets plus textured particles
 
 ## Your tasks
 
@@ -37,7 +52,7 @@ Repo: `wrenthoms-bit/osmos-synesthetic-interpreter`. Live now at `https://wrenth
 ### 3. Merge and verify live
 - Open a PR from `v2` to `main`, then merge.
 - On `https://osmos.delrogue.com` check:
-  - the service worker registers (DevTools → Application) and the cache is `osmos-cache-v5`
+  - the service worker registers (DevTools → Application) and the cache is `osmos-cache-v6`
   - the manifest has no errors and the install prompt appears
   - the camera turns on and COCO-SSD loads from the CDN, with boxes labelled like "cup → Coffee?"
   - the sound plays after a tap

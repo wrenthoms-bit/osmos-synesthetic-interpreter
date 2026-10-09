@@ -34,7 +34,8 @@
     ["native", "Australian natives"],
     ["animal", "Animals & people"],
     ["home",   "Home & materials"],
-    ["chem",   "Chemical & industrial"]
+    ["chem",   "Chemical & industrial"],
+    ["molecule", "Aroma molecules"]
   ];
 
   // [key, short label, long label, source]
@@ -767,6 +768,83 @@
     ["cigarette","tobacco smoke","ashtray","smoke"],
     "Acrid, ashy and stale-sweet. Residue ('thirdhand smoke') clings to fabric and walls for months.",
     "pyridines, phenols, aldehydes");
+
+
+  /* ------------------------ AROMA MOLECULES ------------------------
+     Single perfumery materials ("mono molecules"). With no source object,
+     the association colour is that of the material each one evokes. */
+  add("ethylvanillin","Ethyl Vanillin","molecule","","#f2e2c0", .7,.8,.15,
+    "sweet:.95 bakery:.5 edible:.5 warm:.4 chemical:.15 flower:.1",
+    ["ethyl vanillin","ethylvanillin","bourbonal"],
+    "Sweet, creamy vanilla — richer, more powdery and almost chocolatey than vanillin, and roughly three times as potent.",
+    "ethyl vanillin (3-ethoxy-4-hydroxybenzaldehyde)",
+    "A synthetic molecule. Jacques Guerlain's heavy dose of it in a variation of Jicky became the heart of Shalimar (1925).");
+  add("vanillin","Vanillin","molecule","","#f3e6c8", .55,.8,.2,
+    "sweet:.9 bakery:.4 edible:.5 warm:.3 wood:.1",
+    ["vanillin"],
+    "Clean, sweet, creamy vanilla — the main odour molecule of the vanilla pod, though the real pod contains hundreds of others.",
+    "vanillin (4-hydroxy-3-methoxybenzaldehyde)",
+    "First synthesised in 1874. Today most vanillin is made from petrochemicals or wood lignin rather than vanilla pods.");
+  add("isoesuper","Iso E Super","molecule","","#c9a27a", .3,.7,.1,
+    "wood:.9 musky:.4 warm:.3 sweet:.2",
+    ["iso e super","iso e","otne","molecule 01"],
+    "Smooth, dry, velvety woody-amber — cedar shavings and warm skin. Subtle up close; many people notice it more in the air around someone wearing it.",
+    "OTNE (Iso E Super)",
+    "Developed by IFF in 1973. The fragrance Molecule 01 (2006) is essentially this one material. Many people report being partly unable to smell it.");
+  add("ambroxan","Ambroxan","molecule","","#d8c6a0", .45,.75,.05,
+    "musky:.7 wood:.6 sweet:.3 earthy:.2",
+    ["ambroxan","ambrox","ambroxide","molecule 02"],
+    "Warm, dry, mineral-woody and skin-like with a faint salty-ambery glow — the synthetic stand-in for ambergris.",
+    "ambroxide (Ambrox / Ambroxan)",
+    "Made from sclareol, a compound found in clary sage.");
+  add("hedione","Hedione","molecule","","#f0eadc", .3,.8,.45,
+    "flower:.8 fruit:.2 sweet:.2 grass:.2 cold:.1",
+    ["hedione","methyl dihydrojasmonate"],
+    "Light, airy, transparent jasmine with a citrusy-green freshness — less a smell than a sense of radiance and space.",
+    "methyl dihydrojasmonate",
+    "Introduced by Firmenich in the 1960s and famously used in Dior's Eau Sauvage (1966).");
+  add("galaxolide","Galaxolide","molecule","","#e8edf2", .4,.75,.05,
+    "musky:.9 sweet:.3 flower:.3 chemical:.15",
+    ["galaxolide","hhcb","white musk"],
+    "Clean, sweet, powdery 'white musk' — the smell most people know as freshly washed laundry.",
+    "galaxolide (HHCB), a polycyclic musk",
+    "One of the most widely used musks in laundry products. A noticeable share of people can barely smell it.");
+  add("calone","Calone","molecule","","#8fd3e0", .7,.5,.55,
+    "cold:.6 fruit:.4 chemical:.3 fish:.2 grass:.2",
+    ["calone","watermelon ketone","aquatic","marine note"],
+    "Marine, watery and melon-like — a fresh 'sea breeze' with a slightly metallic cucumber-melon edge. Overdosed, it turns oddly fishy-ozonic.",
+    "Calone (watermelon ketone)",
+    "Discovered by Pfizer in 1966; it defined the wave of 'aquatic' fragrances in the 1990s.");
+  add("aldehydes","Aliphatic Aldehydes","molecule","","#f5f2e6", .75,.5,.7,
+    "chemical:.5 sour:.3 metallic:.3 flower:.2 cold:.2 fruit:.2",
+    ["aldehydes","aldehydic","aldehyde c-12","lauric aldehyde","c-10","c-11"],
+    "Bright, waxy, soapy and fizzing — somewhere between a snuffed candle, orange peel and clean metal. Perfumers call the effect 'champagne bubbles'.",
+    "decanal (C-10), undecanal (C-11), dodecanal (C-12)",
+    "An overdose of aldehydes gave Chanel No. 5 (1921) its famous sparkle.");
+  add("linalool","Linalool","molecule","","#c7b8e8", .45,.8,.7,
+    "flower:.7 wood:.3 fruit:.2 sweet:.2 cold:.1",
+    ["linalool"],
+    "Fresh, light floral-woody with a hint of citrus — the shared thread between lavender, bergamot and coriander seed.",
+    "linalool",
+    "One of the most widespread odour molecules in plants, found in more than 200 species.");
+  add("coumarinMol","Coumarin","molecule","","#d8c06a", .5,.75,.25,
+    "sweet:.6 grass:.4 bakery:.3 wood:.2 spices:.1",
+    ["coumarin","fougere"],
+    "Sweet, warm hay with almond and tonka.",
+    "coumarin",
+    "First synthesised in 1868 by William Perkin. Houbigant's Fougère Royale (1882) was among the first perfumes to use it and founded the 'fougère' family.");
+  add("indole","Indole","molecule","","#e8e0c8", .85,-.2,.3,
+    "decayed:.6 flower:.5 musky:.3 chemical:.3 sweaty:.2",
+    ["indole","indolic"],
+    "Heavy and narcotic — heady white-floral in a trace, mothballs and faecal at full strength.",
+    "indole",
+    "Present in jasmine, orange blossom and tuberose — and in faeces. Dose is everything.");
+  add("dihydromyrcenol","Dihydromyrcenol","molecule","","#b8e0e8", .7,.65,.75,
+    "cold:.5 fruit:.4 chemical:.4 flower:.3 metallic:.2",
+    ["dihydromyrcenol","cool water"],
+    "Fresh, clean, metallic citrus-lavender — the 'shower-gel fresh' note.",
+    "dihydromyrcenol",
+    "Used in large doses in Davidoff Cool Water (1988), helping launch the fresh masculine style.");
 
   /* -------------------- descriptor keyword lexicon ------------------
      Used only when a typed word isn't in the library: we build a

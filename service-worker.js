@@ -14,7 +14,7 @@
   change to index.html/app.js/scents.js/manifest/icons, so old clients pick up the update
   instead of quietly serving a stale copy from their cache.
 */
-const CACHE_NAME = 'osmos-cache-v5';
+const CACHE_NAME = 'osmos-cache-v6';
 
 const APP_SHELL = [
   './',
